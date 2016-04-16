@@ -1,4 +1,4 @@
-import os, sqlite3
+import os, sqlite3, sys
 import gofish       # https://github.com/fohristiwhirl/gofish
 
 rootdir = "Database"
@@ -19,7 +19,7 @@ try:
                     HA text NULL);
         ''')
 except:
-    pass
+    sys.exit(1)
 
 for root, dirs, files in os.walk(rootdir):
     for f in files:
