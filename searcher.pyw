@@ -79,6 +79,7 @@ def search_two(name1, name2):
     c.execute('''SELECT path, filename, PW, PB, RE, HA, EV from Games where (PB like ? and PW like ?) or (PB like ? and PW like ?);''', (name1, name2, name2, name1))
 
     for n, row in enumerate(c):
+        game = Game(path = row[0], filename = row[1], PW = row[2], PB = row[3], RE = row[4], HA = row[5], EV = row[6])
         listbox.insert(tkinter.END, game.description)
         games[n] = game
 
