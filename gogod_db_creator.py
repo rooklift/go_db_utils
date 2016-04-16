@@ -34,32 +34,32 @@ for root, dirs, files in os.walk(rootdir):
         try:
             PB = sgfroot.properties["PB"][0]
         except:
-            PB = "NULL"
+            PB = None
 
         try:
             PW = sgfroot.properties["PW"][0]
         except:
-            PW = "NULL"
+            PW = None
 
         try:
             RE = sgfroot.properties["RE"][0]
         except:
-            RE = "NULL"
+            RE = None
 
         try:
             DT = sgfroot.properties["DT"][0]
         except:
-            DT = "NULL"
+            DT = None
 
         try:
             EV = sgfroot.properties["EV"][0]
         except:
-            EV = "NULL"
+            EV = None
 
         try:
             HA = sgfroot.properties["HA"][0]
         except:
-            HA = "NULL"
+            HA = None
 
         fields = (path, filename, PB, PW, RE, DT, EV, HA)
 

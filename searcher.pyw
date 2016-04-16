@@ -23,12 +23,12 @@ class Game():
         else:
             direction = " ? "
 
-        if str(self.HA) != "NULL":
+        if self.HA != None:
             handicap = "(H{})".format(self.HA)
         else:
             handicap = ""
 
-        if str(self.EV) != "NULL":
+        if self.EV != None:
             event = self.EV
         else:
             event = ""
