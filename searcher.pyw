@@ -35,7 +35,7 @@ class Game():
 
         return "{:10}   {:24} {} {:24}  {:5} {} ".format(self.filename[0:10], self.PW[0:24], direction, self.PB[0:24], handicap, event)
 
-def launcher():
+def launcher(*args):
     sel = listbox.curselection()
     if sel:
         path = games[sel[0]].path
@@ -122,4 +122,5 @@ mainframe.pack()
 master.wm_title("GoGoD Searcher")
 
 games = dict()
+listbox.bind("<Double-Button-1>", launcher)
 tkinter.mainloop()
