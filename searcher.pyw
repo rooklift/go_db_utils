@@ -4,22 +4,36 @@ PROGRAM = "C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"
 DBFILE = "gogod.db"
 
 class Game():
-    def __init__(self, path, filename, PW, PB, RE):
+    def __init__(self, path, filename, PW, PB, RE, HA, EV):
         self.path = path
         self.filename = filename
         self.PW = PW
         self.PB = PB
         self.RE = RE
+        self.HA = HA
+        self.EV = EV
 
     @property
     def description(self):
+
         if "B+" in self.RE:
             direction = " < "
         elif "W+" in self.RE:
             direction = " > "
         else:
             direction = " ? "
-        return "{} --- {} {} {}".format(self.filename, self.PW, direction, self.PB)
+
+        if str(self.HA) != "NULL":
+            handicap = "(H{})".format(self.HA)
+        else:
+            handicap = ""
+
+        if str(self.EV) != "NULL":
+            event = self.EV
+        else:
+            event = ""
+
+        return "{:10}   {:24} {} {:24}  {:5} {} ".format(self.filename[0:10], self.PW[0:24], direction, self.PB[0:24], handicap, event)
 
 def launcher():
     sel = listbox.curselection()
@@ -51,10 +65,10 @@ def searcher():
 def search_one(name):
     name = "%" + name + "%"
 
-    c.execute('''SELECT path, filename, PW, PB, RE from Games where PB like ? or PW like ?;''', (name, name))
+    c.execute('''SELECT path, filename, PW, PB, RE, HA, EV from Games where PB like ? or PW like ?;''', (name, name))
 
     for n, row in enumerate(c):
-        game = Game(row[0], row[1], row[2], row[3], row[4])
+        game = Game(path = row[0], filename = row[1], PW = row[2], PB = row[3], RE = row[4], HA = row[5], EV = row[6])
         listbox.insert(tkinter.END, game.description)
         games[n] = game
 
@@ -62,10 +76,9 @@ def search_two(name1, name2):
     name1 = "%" + name1 + "%"
     name2 = "%" + name2 + "%"
 
-    c.execute('''SELECT path, filename, PW, PB, RE from Games where (PB like ? and PW like ?) or (PB like ? and PW like ?);''', (name1, name2, name2, name1))
+    c.execute('''SELECT path, filename, PW, PB, RE, HA, EV from Games where (PB like ? and PW like ?) or (PB like ? and PW like ?);''', (name1, name2, name2, name1))
 
     for n, row in enumerate(c):
-        game = Game(row[0], row[1], row[2], row[3], row[4])
         listbox.insert(tkinter.END, game.description)
         games[n] = game
 
@@ -95,7 +108,7 @@ tkinter.Label(mainframe, text = "").pack()
 
 listframe = tkinter.Frame(mainframe)
 scrollbar = tkinter.Scrollbar(listframe, orient = tkinter.VERTICAL)
-listbox = tkinter.Listbox(listframe, yscrollcommand = scrollbar.set, width = 80)
+listbox = tkinter.Listbox(listframe, yscrollcommand = scrollbar.set, width = 120, height = 20, font = "Courier")
 scrollbar.config(command = listbox.yview)
 scrollbar.pack(side = tkinter.RIGHT, fill = tkinter.Y)
 listbox.pack(side = tkinter.LEFT, fill = tkinter.BOTH, expand = 1)

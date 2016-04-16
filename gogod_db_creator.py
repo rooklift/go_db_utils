@@ -16,6 +16,7 @@ try:
                     PW text NULL,
                     RE text NULL,
                     DT text NULL,
+                    EV text NULL,
                     HA text NULL);
         ''')
 except:
@@ -51,15 +52,20 @@ for root, dirs, files in os.walk(rootdir):
             DT = "NULL"
 
         try:
+            EV = sgfroot.properties["EV"][0]
+        except:
+            EV = "NULL"
+
+        try:
             HA = sgfroot.properties["HA"][0]
         except:
             HA = "NULL"
 
-        fields = (path, filename, PB, PW, RE, DT, HA)
+        fields = (path, filename, PB, PW, RE, DT, EV, HA)
 
         command = '''
-                     INSERT INTO Games(path, filename, PB, PW, RE, DT, HA)
-                     VALUES(?,?,?,?,?,?,?);
+                     INSERT INTO Games(path, filename, PB, PW, RE, DT, EV, HA)
+                     VALUES(?,?,?,?,?,?,?,?);
                   '''
 
         c.execute(command, fields)
