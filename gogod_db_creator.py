@@ -1,5 +1,5 @@
 import os, sqlite3
-import gofish
+import gofish       # https://github.com/fohristiwhirl/gofish
 
 rootdir = "Database"
 
