@@ -16,12 +16,12 @@ class Game():
     @property
     def description(self):
 
-        if "B+" in self.RE:
-            direction = " < "
-        elif "W+" in self.RE:
-            direction = " > "
-        else:
-            direction = " ? "
+        direction = " ? "
+        if self.RE != None:
+            if "B+" in self.RE:
+                direction = " < "
+            elif "W+" in self.RE:
+                direction = " > "
 
         if self.HA != None:
             handicap = "(H{})".format(self.HA)
@@ -42,17 +42,15 @@ def launcher(*args):
         subprocess.Popen([PROGRAM, path])
 
 def searcher():
-    global p1_box
-    global p2_box
-    global games
+    global games; games = dict()
 
     p1 = p1_box.get().strip()
     p2 = p2_box.get().strip()
 
     listbox.delete(0, tkinter.END)
-    games = dict()
 
     if not p1 and not p2:
+        result_count.config(text = "")
         return
 
     if p1 and not p2:
@@ -61,6 +59,11 @@ def searcher():
         search_one(p2)
     else:
         search_two(p1, p2)
+
+    s = "{} games found".format(len(games))
+
+    result_count.config(text = s)
+
 
 def search_one(name):
     name = "%" + name + "%"
@@ -105,6 +108,10 @@ p2_frame.pack()
 
 tkinter.Label(mainframe, text = "").pack()
 tkinter.Button(mainframe, text = "Search", command = searcher).pack()
+tkinter.Label(mainframe, text = "").pack()
+
+result_count = tkinter.Label(mainframe, text = "")
+result_count.pack()
 tkinter.Label(mainframe, text = "").pack()
 
 listframe = tkinter.Frame(mainframe)
