@@ -12,6 +12,7 @@ try:
                 CREATE TABLE Games (
                     path text,
                     filename text,
+                    SZ int NULL,
                     PB text NULL,
                     PW text NULL,
                     RE text NULL,
@@ -30,6 +31,11 @@ for root, dirs, files in os.walk(rootdir):
             filename = os.path.basename(path)
         except:
             continue
+
+        try:
+            SZ = int(sgfroot.properties["SZ"][0])
+        except:
+            SZ = None
 
         try:
             PB = sgfroot.properties["PB"][0]
@@ -61,11 +67,10 @@ for root, dirs, files in os.walk(rootdir):
         except:
             HA = None
 
-        fields = (path, filename, PB, PW, RE, DT, EV, HA)
-
+        fields = (path, filename, SZ, PB, PW, RE, DT, EV, HA)
         command = '''
-                     INSERT INTO Games(path, filename, PB, PW, RE, DT, EV, HA)
-                     VALUES(?,?,?,?,?,?,?,?);
+                     INSERT INTO Games(path, filename, SZ, PB, PW, RE, DT, EV, HA)
+                     VALUES(?,?,?,?,?,?,?,?,?);
                   '''
 
         c.execute(command, fields)

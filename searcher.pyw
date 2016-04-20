@@ -4,7 +4,7 @@ PROGRAM = "C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"
 DBFILE = "gogod.db"
 
 class Game():
-    def __init__(self, path, filename, PW, PB, RE, HA, EV):
+    def __init__(self, path, filename, PW, PB, RE, HA, EV, DT):
         self.path = path
         self.filename = filename
         self.PW = PW
@@ -12,6 +12,7 @@ class Game():
         self.RE = RE
         self.HA = HA
         self.EV = EV
+        self.DT = DT
 
     @property
     def description(self):
@@ -23,17 +24,32 @@ class Game():
             elif "W+" in self.RE:
                 direction = " > "
 
+        if self.DT != None:
+            date = self.DT
+        else:
+            date = ""
+
         if self.HA != None:
             handicap = "(H{})".format(self.HA)
         else:
             handicap = ""
+
+        if self.PW != None:
+            PW = self.PW
+        else:
+            PW = ""
+
+        if self.PB != None:
+            PB = self.PB
+        else:
+            PB = ""
 
         if self.EV != None:
             event = self.EV
         else:
             event = ""
 
-        return "{:10}   {:24} {} {:24}  {:5} {} ".format(self.filename[0:10], self.PW[0:24], direction, self.PB[0:24], handicap, event)
+        return "{:10}   {:24} {} {:24}  {:5} {} ".format(date[0:10], PW[0:24], direction, PB[0:24], handicap, event)
 
 def launcher(*args):
     sel = listbox.curselection()
@@ -68,10 +84,14 @@ def searcher():
 def search_one(name):
     name = "%" + name + "%"
 
-    c.execute('''SELECT path, filename, PW, PB, RE, HA, EV from Games where PB like ? or PW like ?;''', (name, name))
+    c.execute('''SELECT path, filename, PW, PB, RE, HA, EV, DT
+                 FROM Games
+                 WHERE (PB like ? or PW like ?) and (SZ = 19 or SZ = NULL)
+                 ORDER BY DT;''',
+             (name, name))
 
     for n, row in enumerate(c):
-        game = Game(path = row[0], filename = row[1], PW = row[2], PB = row[3], RE = row[4], HA = row[5], EV = row[6])
+        game = Game(path = row[0], filename = row[1], PW = row[2], PB = row[3], RE = row[4], HA = row[5], EV = row[6], DT = row[7])
         listbox.insert(tkinter.END, game.description)
         games[n] = game
 
@@ -79,10 +99,14 @@ def search_two(name1, name2):
     name1 = "%" + name1 + "%"
     name2 = "%" + name2 + "%"
 
-    c.execute('''SELECT path, filename, PW, PB, RE, HA, EV from Games where (PB like ? and PW like ?) or (PB like ? and PW like ?);''', (name1, name2, name2, name1))
+    c.execute('''SELECT path, filename, PW, PB, RE, HA, EV, DT
+                 FROM Games
+                 WHERE ((PB like ? and PW like ?) or (PB like ? and PW like ?)) and (SZ = 19 or SZ = NULL)
+                 ORDER BY DT;''',
+             (name1, name2, name2, name1))
 
     for n, row in enumerate(c):
-        game = Game(path = row[0], filename = row[1], PW = row[2], PB = row[3], RE = row[4], HA = row[5], EV = row[6])
+        game = Game(path = row[0], filename = row[1], PW = row[2], PB = row[3], RE = row[4], HA = row[5], EV = row[6], DT = row[7])
         listbox.insert(tkinter.END, game.description)
         games[n] = game
 
