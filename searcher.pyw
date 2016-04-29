@@ -1,7 +1,7 @@
 import os, sqlite3, subprocess, tkinter
 
 PROGRAM = "C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"
-DBFILE = "gogod.db"
+DBFILE = "go.db"
 
 class Game():
     def __init__(self, path, filename, PW, PB, RE, HA, EV, DT):

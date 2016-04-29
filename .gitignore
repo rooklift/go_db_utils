@@ -1,6 +1,7 @@
 __pycache__/
-Database/
+GoGoD/
+Go4Go/
 gofish/
 NewInGo/
-gogod.db
+*.db
 Names.htm
