@@ -1,9 +1,7 @@
-# gogod_utils
-Some helpers for the Games of Go on Download collection:
+# go_db_utils
+Some helpers for managing a database of Go games. (Currently I have GoGoD and Go4Go, and use Sabaki as my SGF editor; the scripts here reflect all that, but some minor alterations could be made to tailor it for your use.)
 
-* Create a database of the games with `gogod_db_creator.py` (requires [gofish](https://github.com/fohristiwhirl/gofish))
+* Create a database of the games with `go_db_creator.py` (requires [gofish](https://github.com/fohristiwhirl/gofish))
 * Search the database with `searcher.pyw`
-
-For best results, some constants at the top of `searcher.pyw` should be modified.
 
 ![Searcher Screenshot](/screenshot.png?raw=true)
