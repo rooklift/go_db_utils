@@ -33,7 +33,7 @@ db_known_files = set()
 
 c.execute(
     '''
-            SELECT path from Games
+            SELECT path from Games;
     '''
 )
 
@@ -119,4 +119,5 @@ conn.commit()
 c.close()
 
 print("{} files added to database...".format(count))
+print("Database size now: {}".format(len(db_known_files) + len(files_to_add_to_db)))
 input()

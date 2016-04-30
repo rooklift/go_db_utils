@@ -150,7 +150,7 @@ tkinter.Label(mainframe, text = "").pack()
 tkinter.Button(mainframe, text = "Launch", command = launcher).pack()
 
 mainframe.pack()
-master.wm_title("GoGoD Searcher")
+master.wm_title("Go DB Searcher")
 
 games = dict()
 listbox.bind("<Double-Button-1>", launcher)
