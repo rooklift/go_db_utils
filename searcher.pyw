@@ -124,8 +124,12 @@ def search_one(name, gameslist):
         game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])
         gameslist.append(game)
 
-    gameslist.sort(key = lambda x : x.date)
+    # Sort by Dyer so the deduplicator can look at neighbouring games and compare dates...
+    # (the reverse doesn't work, since duplicates might not be next to each other if sorted by date)
+
+    gameslist.sort(key = lambda x : x.dyer)
     deduplicate(gameslist)
+    gameslist.sort(key = lambda x : x.date)
 
     for game in gameslist:
         listbox.insert(tkinter.END, game.description)
@@ -144,8 +148,12 @@ def search_two(name1, name2, gameslist):
         game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])
         gameslist.append(game)
 
-    gameslist.sort(key = lambda x : x.date)
+    # Sort by Dyer so the deduplicator can look at neighbouring games and compare dates...
+    # (the reverse doesn't work, since duplicates might not be next to each other if sorted by date)
+
+    gameslist.sort(key = lambda x : x.dyer)
     deduplicate(gameslist)
+    gameslist.sort(key = lambda x : x.date)
 
     for game in gameslist:
         listbox.insert(tkinter.END, game.description)
