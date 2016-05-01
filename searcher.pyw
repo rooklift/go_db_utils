@@ -16,21 +16,18 @@ class Game():
 
     @property
     def date(self):
+        date = ""
         if self.DT != None:
-            date = self.DT
-            if "broadcast" in date.lower() or "published" in date.lower():
+            try:
+                date = re.search('''.?(\d\d\d\d-\d\d-\d\d).?''', self.DT).group(1)
+            except:
                 try:
-                    date = re.search('''.?(\d\d\d\d-\d\d-\d\d).?''', date).group(1)
+                    date = re.search('''.?(\d\d\d\d-\d\d).?''', self.DT).group(1)
                 except:
                     try:
-                        date = re.search('''.?(\d\d\d\d-\d\d).?''', date).group(1)
+                        date = re.search('''.?(\d\d\d\d).?''', self.DT).group(1)
                     except:
-                        try:
-                            date = re.search('''.?(\d\d\d\d).?''', date).group(1)
-                        except:
-                            pass
-        else:
-            date = ""
+                        pass
         return date
 
     @property
