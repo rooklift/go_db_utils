@@ -15,12 +15,12 @@ try:
                     path text,
                     filename text,
                     SZ int NULL,
+                    HA int NULL,
                     PB text NULL,
                     PW text NULL,
                     RE text NULL,
                     DT text NULL,
-                    EV text NULL,
-                    HA text NULL);
+                    EV text NULL);
         ''')
 except:
     pass
@@ -75,38 +75,38 @@ for path in files_to_add_to_db:
         SZ = None
 
     try:
-        PB = sgfroot.properties["PB"][0]
+        HA = int(sgfroot.properties["HA"][0])
+    except:
+        HA = None
+
+    try:
+        PB = sgfroot.properties["PB"][0].strip()
     except:
         PB = None
 
     try:
-        PW = sgfroot.properties["PW"][0]
+        PW = sgfroot.properties["PW"][0].strip()
     except:
         PW = None
 
     try:
-        RE = sgfroot.properties["RE"][0]
+        RE = sgfroot.properties["RE"][0].strip()
     except:
         RE = None
 
     try:
-        DT = sgfroot.properties["DT"][0]
+        DT = sgfroot.properties["DT"][0].strip()
     except:
         DT = None
 
     try:
-        EV = sgfroot.properties["EV"][0]
+        EV = sgfroot.properties["EV"][0].strip()
     except:
         EV = None
 
-    try:
-        HA = sgfroot.properties["HA"][0]
-    except:
-        HA = None
-
-    fields = (path, filename, SZ, PB, PW, RE, DT, EV, HA)
+    fields = (path, filename, SZ, HA, PB, PW, RE, DT, EV)
     command = '''
-                 INSERT INTO Games(path, filename, SZ, PB, PW, RE, DT, EV, HA)
+                 INSERT INTO Games(path, filename, SZ, HA, PB, PW, RE, DT, EV)
                  VALUES(?,?,?,?,?,?,?,?,?);
               '''
 

@@ -18,11 +18,30 @@ class Game():
     def description(self):
 
         direction = " ? "
+        result = ""
         if self.RE != None:
+
             if "B+" in self.RE:
                 direction = " < "
             elif "W+" in self.RE:
                 direction = " > "
+
+            if "B+R" in self.RE:
+                result = "B+R"
+            elif "B+T" in self.RE:
+                result = "B+T"
+            elif "W+R" in self.RE:
+                result = "W+R"
+            elif "W+T" in self.RE:
+                result = "W+T"
+            elif "B+" in self.RE:
+                result = self.RE.split()[0]     # Some GoGoD results say "B+4 (moves after 150 not known)" or suchlike
+                if "B+" not in result:
+                    result = "B+"
+            elif "W+" in self.RE:
+                result = self.RE.split()[0]
+                if "W+" not in result:
+                    result = "W+"
 
         if self.DT != None:
             date = self.DT
@@ -49,7 +68,7 @@ class Game():
         else:
             event = ""
 
-        return "{:10}   {:24} {} {:24}  {:5} {} ".format(date[0:10], PW[0:24], direction, PB[0:24], handicap, event)
+        return "{:10}   {:7} {:24} {} {:24}  {:5} {} ".format(date[0:10], result[0:7], PW[0:24], direction, PB[0:24], handicap, event)
 
 def launcher(*args):
     sel = listbox.curselection()
