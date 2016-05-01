@@ -4,9 +4,10 @@ PROGRAM = "C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"
 DBFILE = "go.db"
 
 class Game():
-    def __init__(self, path, filename, PW, PB, RE, HA, EV, DT):
+    def __init__(self, path, filename, dyer, PW, PB, RE, HA, EV, DT):
         self.path = path
         self.filename = filename
+        self.dyer = dyer
         self.PW = PW
         self.PB = PB
         self.RE = RE
@@ -113,17 +114,18 @@ def searcher(gameslist):
 def search_one(name, gameslist):
     name = "%" + name + "%"
 
-    c.execute('''SELECT path, filename, PW, PB, RE, HA, EV, DT
+    c.execute('''SELECT path, filename, dyer, PW, PB, RE, HA, EV, DT
                  FROM Games
                  WHERE (PB like ? or PW like ?) and (SZ = 19 or SZ = NULL)
                  ORDER BY DT;''',
              (name, name))
 
     for row in c:
-        game = Game(path = row[0], filename = row[1], PW = row[2], PB = row[3], RE = row[4], HA = row[5], EV = row[6], DT = row[7])
+        game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])
         gameslist.append(game)
 
     gameslist.sort(key = lambda x : x.date)
+    deduplicate(gameslist)
 
     for game in gameslist:
         listbox.insert(tkinter.END, game.description)
@@ -132,20 +134,26 @@ def search_two(name1, name2, gameslist):
     name1 = "%" + name1 + "%"
     name2 = "%" + name2 + "%"
 
-    c.execute('''SELECT path, filename, PW, PB, RE, HA, EV, DT
+    c.execute('''SELECT path, filename, dyer, PW, PB, RE, HA, EV, DT
                  FROM Games
                  WHERE ((PB like ? and PW like ?) or (PB like ? and PW like ?)) and (SZ = 19 or SZ = NULL)
                  ORDER BY DT;''',
              (name1, name2, name2, name1))
 
     for row in c:
-        game = Game(path = row[0], filename = row[1], PW = row[2], PB = row[3], RE = row[4], HA = row[5], EV = row[6], DT = row[7])
+        game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])
         gameslist.append(game)
 
     gameslist.sort(key = lambda x : x.date)
+    deduplicate(gameslist)
 
     for game in gameslist:
         listbox.insert(tkinter.END, game.description)
+
+def deduplicate(gameslist):
+    for n in range(len(gameslist) - 1, 0, -1):
+        if gameslist[n].dyer == gameslist[n - 1].dyer and gameslist[n].date == gameslist[n - 1].date:
+            gameslist.pop(n)
 
 def selection_poll(gameslist):
     sel = listbox.curselection()

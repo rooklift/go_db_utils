@@ -14,6 +14,7 @@ try:
                 CREATE TABLE Games (
                     path text,
                     filename text,
+                    dyer text,
                     SZ int NULL,
                     HA int NULL,
                     PB text NULL,
@@ -56,18 +57,23 @@ for rootdir in rootdirs:
 
 files_to_add_to_db = dir_known_files - db_known_files
 
+files_to_add_list = list(files_to_add_to_db)
+files_to_add_list.sort()
+
 # Add them to db...
 
 print("Updating database...")
 
 count = 0
 
-for path in files_to_add_to_db:
+for path in files_to_add_list:
     try:
         sgfroot = gofish.load(path)
         filename = os.path.basename(path)
     except:
         continue
+
+    dyer = sgfroot.dyer()
 
     try:
         SZ = int(sgfroot.properties["SZ"][0])
@@ -104,10 +110,10 @@ for path in files_to_add_to_db:
     except:
         EV = None
 
-    fields = (path, filename, SZ, HA, PB, PW, RE, DT, EV)
+    fields = (path, filename, dyer, SZ, HA, PB, PW, RE, DT, EV)
     command = '''
-                 INSERT INTO Games(path, filename, SZ, HA, PB, PW, RE, DT, EV)
-                 VALUES(?,?,?,?,?,?,?,?,?);
+                 INSERT INTO Games(path, filename, dyer, SZ, HA, PB, PW, RE, DT, EV)
+                 VALUES(?,?,?,?,?,?,?,?,?,?);
               '''
 
     c.execute(command, fields)

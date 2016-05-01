@@ -4,4 +4,6 @@ Some helpers for managing a database of Go games. (Currently I have GoGoD and Go
 * Create or update a database of the games with `go_db_creator.py` (requires [gofish](https://github.com/fohristiwhirl/gofish))
 * Search the database with `searcher.pyw`
 
+Building the database takes quite a while (well, I have 130k files), mostly due to the calculation of a "Dyer signature" for each game, which is used by the searcher for deduplication purposes.
+
 ![Searcher Screenshot](/screenshot.png?raw=true)
