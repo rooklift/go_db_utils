@@ -1,4 +1,4 @@
-import os, sqlite3, subprocess, tkinter
+import os, re, sqlite3, subprocess, tkinter
 
 PROGRAM = "C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"
 DBFILE = "go.db"
@@ -13,6 +13,25 @@ class Game():
         self.HA = HA
         self.EV = EV
         self.DT = DT
+
+    @property
+    def date(self):
+        if self.DT != None:
+            date = self.DT
+            if "broadcast" in date.lower() or "published" in date.lower():
+                try:
+                    date = re.search('''.?(\d\d\d\d-\d\d-\d\d).?''', date).group(1)
+                except:
+                    try:
+                        date = re.search('''.?(\d\d\d\d-\d\d).?''', date).group(1)
+                    except:
+                        try:
+                            date = re.search('''.?(\d\d\d\d).?''', date).group(1)
+                        except:
+                            pass
+        else:
+            date = ""
+        return date
 
     @property
     def description(self):
@@ -43,11 +62,6 @@ class Game():
                 if "W+" not in result:
                     result = "W+"
 
-        if self.DT != None:
-            date = self.DT
-        else:
-            date = ""
-
         if self.HA != None:
             handicap = "(H{})".format(self.HA)
         else:
@@ -68,16 +82,16 @@ class Game():
         else:
             event = ""
 
-        return "{:10}   {:7} {:24} {} {:24}  {:5} {} ".format(date[0:10], result[0:7], PW[0:24], direction, PB[0:24], handicap, event)
+        return "{:10}   {:7} {:24} {} {:24}  {:5} {} ".format(self.date[0:10], result[0:7], PW[0:24], direction, PB[0:24], handicap, event)
 
-def launcher(*args):
+def launcher(gameslist):
     sel = listbox.curselection()
     if sel:
-        path = games[sel[0]].path
+        path = gameslist[sel[0]].path
         subprocess.Popen([PROGRAM, path])
 
-def searcher():
-    global games; games = dict()
+def searcher(gameslist):
+    gameslist[:] = []       # Clear the list in place so other references to it are affected
 
     p1 = p1_box.get().strip()
     p2 = p2_box.get().strip()
@@ -89,18 +103,17 @@ def searcher():
         return
 
     if p1 and not p2:
-        search_one(p1)
+        search_one(p1, gameslist)
     elif p2 and not p1:
-        search_one(p2)
+        search_one(p2, gameslist)
     else:
-        search_two(p1, p2)
+        search_two(p1, p2, gameslist)
 
-    s = "{} games found".format(len(games))
+    s = "{} games found".format(len(gameslist))
 
     result_count.config(text = s)
 
-
-def search_one(name):
+def search_one(name, gameslist):
     name = "%" + name + "%"
 
     c.execute('''SELECT path, filename, PW, PB, RE, HA, EV, DT
@@ -109,12 +122,16 @@ def search_one(name):
                  ORDER BY DT;''',
              (name, name))
 
-    for n, row in enumerate(c):
+    for row in c:
         game = Game(path = row[0], filename = row[1], PW = row[2], PB = row[3], RE = row[4], HA = row[5], EV = row[6], DT = row[7])
-        listbox.insert(tkinter.END, game.description)
-        games[n] = game
+        gameslist.append(game)
 
-def search_two(name1, name2):
+    gameslist.sort(key = lambda x : x.date)
+
+    for game in gameslist:
+        listbox.insert(tkinter.END, game.description)
+
+def search_two(name1, name2, gameslist):
     name1 = "%" + name1 + "%"
     name2 = "%" + name2 + "%"
 
@@ -124,12 +141,24 @@ def search_two(name1, name2):
                  ORDER BY DT;''',
              (name1, name2, name2, name1))
 
-    for n, row in enumerate(c):
+    for row in c:
         game = Game(path = row[0], filename = row[1], PW = row[2], PB = row[3], RE = row[4], HA = row[5], EV = row[6], DT = row[7])
+        gameslist.append(game)
+
+    gameslist.sort(key = lambda x : x.date)
+
+    for game in gameslist:
         listbox.insert(tkinter.END, game.description)
-        games[n] = game
+
+def selection_poll(gameslist):
+    sel = listbox.curselection()
+    if sel:
+        selected_file.config(text = gameslist[sel[0]].path)
+    master.after(100, lambda : selection_poll(gameslist))
 
 # -----------------------------------------------------------
+
+gameslist = list()
 
 conn = sqlite3.connect(DBFILE)
 c = conn.cursor()
@@ -150,7 +179,7 @@ p2_box.pack(side = tkinter.RIGHT)
 p2_frame.pack()
 
 tkinter.Label(mainframe, text = "").pack()
-tkinter.Button(mainframe, text = "Search", command = searcher).pack()
+tkinter.Button(mainframe, text = "Search", command = lambda : searcher(gameslist)).pack()
 tkinter.Label(mainframe, text = "").pack()
 
 result_count = tkinter.Label(mainframe, text = "")
@@ -165,12 +194,14 @@ scrollbar.pack(side = tkinter.RIGHT, fill = tkinter.Y)
 listbox.pack(side = tkinter.LEFT, fill = tkinter.BOTH, expand = 1)
 listframe.pack()
 
-tkinter.Label(mainframe, text = "").pack()
-tkinter.Button(mainframe, text = "Launch", command = launcher).pack()
+selected_file = tkinter.Label(mainframe, text = "")
+selected_file.pack()
+tkinter.Button(mainframe, text = "Launch", command = lambda : launcher(gameslist)).pack()
 
 mainframe.pack()
 master.wm_title("Go DB Searcher")
 
-games = dict()
-listbox.bind("<Double-Button-1>", launcher)
+listbox.bind("<Double-Button-1>", lambda x : launcher(gameslist))
+
+selection_poll(gameslist)
 tkinter.mainloop()
