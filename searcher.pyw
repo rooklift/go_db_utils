@@ -18,7 +18,7 @@ class Game():
     @property
     def date(self):
         date = ""
-        if self.DT != None:
+        if self.DT:
             try:
                 date = re.search('''.?(\d\d\d\d-\d\d-\d\d).?''', self.DT).group(1)
             except:
@@ -36,7 +36,7 @@ class Game():
 
         direction = " ? "
         result = ""
-        if self.RE != None:
+        if self.RE:
 
             if "B+" in self.RE:
                 direction = " < "
@@ -60,22 +60,22 @@ class Game():
                 if "W+" not in result:
                     result = "W+"
 
-        if self.HA != None:
+        if self.HA:
             handicap = "(H{})".format(self.HA)
         else:
             handicap = ""
 
-        if self.PW != None:
+        if self.PW:
             PW = self.PW
         else:
             PW = ""
 
-        if self.PB != None:
+        if self.PB:
             PB = self.PB
         else:
             PB = ""
 
-        if self.EV != None:
+        if self.EV:
             event = self.EV
         else:
             event = ""
@@ -93,70 +93,46 @@ def searcher(gameslist):
 
     p1 = p1_box.get().strip()
     p2 = p2_box.get().strip()
+    ev = ev_box.get().strip()
+    dt = dt_box.get().strip()
 
     listbox.delete(0, tkinter.END)
 
-    if not p1 and not p2:
-        result_count.config(text = "")
-        return
+    name1 = "%" + p1 + "%"
+    name2 = "%" + p2 + "%"
+    event = "%" + ev + "%"
+    date = "%" + dt + "%"
 
-    if p1 and not p2:
-        search_one(p1, gameslist)
-    elif p2 and not p1:
-        search_one(p2, gameslist)
-    else:
-        search_two(p1, p2, gameslist)
+    c.execute('''SELECT path, filename, dyer, PW, PB, RE, HA, EV, DT
+                 FROM Games
+                 WHERE
+                        ((PB like ? and PW like ?) or (PB like ? and PW like ?))
+                    and
+                        (SZ = 19)
+                    and
+                        (EV like ?)
+                    and
+                        (DT like ?)
+                 ORDER BY DT;''',
+             (name1, name2, name2, name1, event, date))
+
+    for row in c:
+        game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])
+        gameslist.append(game)
+
+    # Sort by Dyer so the deduplicator can look at neighbouring games and compare dates...
+    # (the reverse doesn't work, since duplicates might not be next to each other if sorted by date)
+
+    gameslist.sort(key = lambda x : x.dyer)
+    deduplicate(gameslist)
+    gameslist.sort(key = lambda x : x.date)
+
+    for game in gameslist:
+        listbox.insert(tkinter.END, game.description)
 
     s = "{} games found".format(len(gameslist))
-
     result_count.config(text = s)
-
-def search_one(name, gameslist):
-    name = "%" + name + "%"
-
-    c.execute('''SELECT path, filename, dyer, PW, PB, RE, HA, EV, DT
-                 FROM Games
-                 WHERE (PB like ? or PW like ?) and (SZ = 19 or SZ = NULL)
-                 ORDER BY DT;''',
-             (name, name))
-
-    for row in c:
-        game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])
-        gameslist.append(game)
-
-    # Sort by Dyer so the deduplicator can look at neighbouring games and compare dates...
-    # (the reverse doesn't work, since duplicates might not be next to each other if sorted by date)
-
-    gameslist.sort(key = lambda x : x.dyer)
-    deduplicate(gameslist)
-    gameslist.sort(key = lambda x : x.date)
-
-    for game in gameslist:
-        listbox.insert(tkinter.END, game.description)
-
-def search_two(name1, name2, gameslist):
-    name1 = "%" + name1 + "%"
-    name2 = "%" + name2 + "%"
-
-    c.execute('''SELECT path, filename, dyer, PW, PB, RE, HA, EV, DT
-                 FROM Games
-                 WHERE ((PB like ? and PW like ?) or (PB like ? and PW like ?)) and (SZ = 19 or SZ = NULL)
-                 ORDER BY DT;''',
-             (name1, name2, name2, name1))
-
-    for row in c:
-        game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])
-        gameslist.append(game)
-
-    # Sort by Dyer so the deduplicator can look at neighbouring games and compare dates...
-    # (the reverse doesn't work, since duplicates might not be next to each other if sorted by date)
-
-    gameslist.sort(key = lambda x : x.dyer)
-    deduplicate(gameslist)
-    gameslist.sort(key = lambda x : x.date)
-
-    for game in gameslist:
-        listbox.insert(tkinter.END, game.description)
+    return
 
 def deduplicate(gameslist):
     for n in range(len(gameslist) - 1, 0, -1):
@@ -180,16 +156,28 @@ master = tkinter.Tk()
 mainframe = tkinter.Frame(master, borderwidth = 24)
 
 p1_frame = tkinter.Frame(mainframe)
-tkinter.Label(p1_frame, text = "Player 1").pack(side = tkinter.LEFT)
+tkinter.Label(p1_frame, text = "Player 1 ", font = "Courier").pack(side = tkinter.LEFT)
 p1_box = tkinter.Entry(p1_frame, width = 60)
 p1_box.pack(side = tkinter.RIGHT)
 p1_frame.pack()
 
 p2_frame = tkinter.Frame(mainframe)
-tkinter.Label(p2_frame, text = "Player 2").pack(side = tkinter.LEFT)
+tkinter.Label(p2_frame, text = "Player 2 ", font = "Courier").pack(side = tkinter.LEFT)
 p2_box = tkinter.Entry(p2_frame, width = 60)
 p2_box.pack(side = tkinter.RIGHT)
 p2_frame.pack()
+
+ev_frame = tkinter.Frame(mainframe)
+tkinter.Label(ev_frame, text = "   Event ", font = "Courier").pack(side = tkinter.LEFT)
+ev_box = tkinter.Entry(ev_frame, width = 60)
+ev_box.pack(side = tkinter.RIGHT)
+ev_frame.pack()
+
+dt_frame = tkinter.Frame(mainframe)
+tkinter.Label(dt_frame, text = "    Date ", font = "Courier").pack(side = tkinter.LEFT)
+dt_box = tkinter.Entry(dt_frame, width = 60)
+dt_box.pack(side = tkinter.RIGHT)
+dt_frame.pack()
 
 tkinter.Label(mainframe, text = "").pack()
 tkinter.Button(mainframe, text = "Search", command = lambda : searcher(gameslist)).pack()
