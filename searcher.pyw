@@ -131,8 +131,9 @@ def searcher(gameslist):
     # Sort by Dyer so the deduplicator can look at neighbouring games and compare dates...
     # (the reverse doesn't work, since duplicates might not be next to each other if sorted by date)
 
-    gameslist.sort(key = lambda x : x.dyer)
-    deduplicate(gameslist)
+    if deduplicate_var.get():
+        gameslist.sort(key = lambda x : x.dyer)
+        deduplicate(gameslist)
     gameslist.sort(key = lambda x : x.date)
 
     for game in gameslist:
@@ -190,6 +191,10 @@ dt_box.pack(side = tkinter.RIGHT)
 dt_frame.pack()
 
 tkinter.Label(mainframe, text = "").pack()
+
+deduplicate_var = tkinter.IntVar(value = 1)
+tkinter.Checkbutton(mainframe, text="Deduplicate", variable = deduplicate_var).pack()
+
 tkinter.Button(mainframe, text = "Search", command = lambda : searcher(gameslist)).pack()
 tkinter.Label(mainframe, text = "").pack()
 
