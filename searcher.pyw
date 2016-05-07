@@ -32,6 +32,10 @@ class Game():
         return date
 
     @property
+    def full_path(self):
+        return os.path.join(self.path, self.filename)
+
+    @property
     def description(self):
 
         direction = " ? "
@@ -85,8 +89,7 @@ class Game():
 def launcher(gameslist):
     sel = listbox.curselection()
     if sel:
-        path = gameslist[sel[0]].path
-        subprocess.Popen([PROGRAM, path])
+        subprocess.Popen([PROGRAM, gameslist[sel[0]].full_path])
 
 def searcher(gameslist):
     gameslist[:] = []       # Clear the list in place so other references to it are affected
@@ -142,7 +145,7 @@ def deduplicate(gameslist):
 def selection_poll(gameslist):
     sel = listbox.curselection()
     if sel:
-        selected_file.config(text = gameslist[sel[0]].path)
+        selected_file.config(text = gameslist[sel[0]].full_path)
     master.after(100, lambda : selection_poll(gameslist))
 
 # -----------------------------------------------------------

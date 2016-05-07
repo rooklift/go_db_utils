@@ -1,7 +1,7 @@
 import os, sqlite3, sys
 import gofish       # https://github.com/fohristiwhirl/gofish
 
-rootdirs = ["GoGoD", "Go4Go"]
+rootdirs = ["archive"]
 
 conn = sqlite3.connect('go.db')
 c = conn.cursor()
@@ -34,12 +34,13 @@ db_known_files = set()
 
 c.execute(
     '''
-            SELECT path from Games;
+            SELECT path, filename from Games;
     '''
 )
 
 for row in c:
-    db_known_files.add(row[0])
+    full_path = os.path.join(row[0], row[1])
+    db_known_files.add(full_path)
 
 # Make a set of all files in the directory structure...
 
@@ -52,8 +53,8 @@ dir_known_files = set()
 for rootdir in rootdirs:
     for root, dirs, files in os.walk(rootdir):
         for f in files:
-            path = os.path.join(root, f)
-            dir_known_files.add(path)
+            full_path = os.path.join(root, f)
+            dir_known_files.add(full_path)
             count += 1
             if count % 10000 == 0:
                 print(".", end="")
@@ -74,10 +75,10 @@ print("Updating database")
 
 count = 0
 
-for path in files_to_add_list:
+for full_path in files_to_add_list:
     try:
-        sgfroot = gofish.load(path)
-        filename = os.path.basename(path)
+        sgfroot = gofish.load(full_path)
+        filename = os.path.basename(full_path)
     except:
         continue
 
@@ -121,6 +122,8 @@ for path in files_to_add_list:
     except:
         EV = ""
 
+    path, __ = os.path.split(full_path)
+
     fields = (path, filename, dyer, SZ, HA, PB, PW, RE, DT, EV)
     command = '''
                  INSERT INTO Games(path, filename, dyer, SZ, HA, PB, PW, RE, DT, EV)
@@ -136,5 +139,5 @@ conn.commit()
 c.close()
 
 print("{} files added to database".format(count))
-print("Database size now: {}".format(len(db_known_files) + len(files_to_add_to_db)))
+print("Database size now: {}".format(len(db_known_files) + count))
 input()

@@ -1,7 +1,5 @@
 __pycache__/
-GoGoD/
-Go4Go/
+archive/
 gofish/
-NewInGo/
 *.db
-Names.htm
+go.db-journal
