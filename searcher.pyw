@@ -106,17 +106,22 @@ def searcher(gameslist):
     event = "%" + ev + "%"
     date = "%" + dt + "%"
 
-    c.execute('''SELECT path, filename, dyer, PW, PB, RE, HA, EV, DT
-                 FROM Games
-                 WHERE
-                        ((PB like ? and PW like ?) or (PB like ? and PW like ?))
-                    and
-                        (SZ = 19)
-                    and
-                        (EV like ?)
-                    and
-                        (DT like ?)
-                 ORDER BY DT;''',
+    c.execute(  '''
+                SELECT
+                    path, filename, dyer, PW, PB, RE, HA, EV, DT
+                FROM
+                    Games
+                WHERE
+                    ((PB like ? and PW like ?) or (PB like ? and PW like ?))
+                and
+                    (SZ = 19)
+                and
+                    (EV like ?)
+                and
+                    (DT like ?)
+                ORDER
+                    BY DT
+                ;''',
              (name1, name2, name2, name1, event, date))
 
     for row in c:
@@ -146,6 +151,8 @@ def selection_poll(gameslist):
     sel = listbox.curselection()
     if sel:
         selected_file.config(text = gameslist[sel[0]].full_path)
+    else:
+        selected_file.config(text = "")
     master.after(100, lambda : selection_poll(gameslist))
 
 # -----------------------------------------------------------

@@ -124,11 +124,11 @@ for full_path in files_to_add_list:
 
     path, __ = os.path.split(full_path)
 
-    fields = (path, filename, dyer, SZ, HA, PB, PW, RE, DT, EV)
     command = '''
                  INSERT INTO Games(path, filename, dyer, SZ, HA, PB, PW, RE, DT, EV)
                  VALUES(?,?,?,?,?,?,?,?,?,?);
               '''
+    fields = (path, filename, dyer, SZ, HA, PB, PW, RE, DT, EV)
     c.execute(command, fields)
 
     print("  ", filename)
@@ -147,11 +147,11 @@ print("Removing from database")
 for full_path in files_to_del_from_db:
     path, filename = os.path.split(full_path)
 
-    fields = (path, filename)
     command = '''
                 DELETE FROM Games
                 WHERE path = ? and filename = ?
               '''
+    fields = (path, filename)
     c.execute(command, fields)
 
     print("  ", filename)
