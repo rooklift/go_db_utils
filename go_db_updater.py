@@ -71,9 +71,9 @@ files_to_add_list.sort()
 
 # Add them to db...
 
-print("Updating database")
+print("Adding to database")
 
-count = 0
+files_added = 0
 
 for full_path in files_to_add_list:
     try:
@@ -129,15 +129,40 @@ for full_path in files_to_add_list:
                  INSERT INTO Games(path, filename, dyer, SZ, HA, PB, PW, RE, DT, EV)
                  VALUES(?,?,?,?,?,?,?,?,?,?);
               '''
-
     c.execute(command, fields)
 
-    print(filename)
-    count += 1
+    print("  ", filename)
+    files_added += 1
+
+print("{} files added to database".format(files_added))
+
+# Remove any missing files...
+
+files_to_del_from_db = db_known_files - dir_known_files
+
+files_removed = 0
+
+print("Removing from database")
+
+for full_path in files_to_del_from_db:
+    path, filename = os.path.split(full_path)
+
+    fields = (path, filename)
+    command = '''
+                DELETE FROM Games
+                WHERE path = ? and filename = ?
+              '''
+    c.execute(command, fields)
+
+    print("  ", filename)
+    files_removed += 1
+
+print("{} files removed from database".format(files_removed))
+
+# ---------------------------------------------------------------------------------
 
 conn.commit()
 c.close()
 
-print("{} files added to database".format(count))
-print("Database size now: {}".format(len(db_known_files) + count))
+print("Database size now: {}".format(len(db_known_files) + files_added - files_removed))
 input()
