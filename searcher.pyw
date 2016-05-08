@@ -1,6 +1,10 @@
 import os, re, sqlite3, subprocess, tkinter
 
-PROGRAM = "C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"
+PROGRAMS =  [
+                ("Sabaki", ["C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"]),
+                ("Gofish", ["python", "C:\\Users\\Owner\\github\\gofish\\game_editor.pyw"]),
+            ]
+
 DBFILE = "go.db"
 
 class Game():
@@ -86,150 +90,179 @@ class Game():
 
         return "{:10}   {:7} {:24} {} {:24}  {:5} {} ".format(self.date[0:10], result[0:7], PW[0:24], direction, PB[0:24], handicap, event)
 
-def launcher(gameslist):
-    sel = listbox.curselection()
-    if sel:
-        subprocess.Popen([PROGRAM, gameslist[sel[0]].full_path])
 
-def searcher(gameslist):
-    gameslist[:] = []       # Clear the list in place so other references to it are affected
+class Root(tkinter.Tk):
+    def __init__(self, *args, **kwargs):
 
-    p1 = p1_box.get().strip()
-    p2 = p2_box.get().strip()
-    ev = ev_box.get().strip()
-    dt = dt_box.get().strip()
-    ha = ha_box.get().strip()
+        tkinter.Tk.__init__(self, *args, **kwargs)
 
-    listbox.delete(0, tkinter.END)
+        self.wm_title("Go DB Searcher")
 
-    name1 = "%" + p1 + "%"
-    name2 = "%" + p2 + "%"
-    event = "%" + ev + "%"
-    date = "%" + dt + "%"
+        # Frames for layout...
 
-    try:
-        ha_min = int(ha)
-    except:
-        ha_min = 0
-        ha_box.delete(0, tkinter.END)
+        mainframe = tkinter.Frame(self, borderwidth = 24)
+        listframe = tkinter.Frame(mainframe)
+        p1_frame = tkinter.Frame(mainframe)
+        p2_frame = tkinter.Frame(mainframe)
+        ev_frame = tkinter.Frame(mainframe)
+        dt_frame = tkinter.Frame(mainframe)
+        ha_frame = tkinter.Frame(mainframe)
+        launch_frame = tkinter.Frame(mainframe)
 
-    c.execute(  '''
-                SELECT
-                    path, filename, dyer, PW, PB, RE, HA, EV, DT
-                FROM
-                    Games
-                WHERE
-                    ((PB like ? and PW like ?) or (PB like ? and PW like ?))
-                and
-                    (SZ = 19)
-                and
-                    (EV like ?)
-                and
-                    (DT like ?)
-                and
-                    (HA >= ?)
-                ORDER
-                    BY DT
-                ;''',
-             (name1, name2, name2, name1, event, date, ha_min))
+        # Attributes...
 
-    for row in c:
-        game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])
-        gameslist.append(game)
+        self.conn = sqlite3.connect(DBFILE)
+        self.c = self.conn.cursor()
+        self.gameslist = list()
+        self.p1_box = tkinter.Entry(p1_frame, width = 60)
+        self.p2_box = tkinter.Entry(p2_frame, width = 60)
+        self.ev_box = tkinter.Entry(ev_frame, width = 60)
+        self.dt_box = tkinter.Entry(dt_frame, width = 60)
+        self.ha_box = tkinter.Entry(ha_frame, width = 60)
+        self.deduplicate_var = tkinter.IntVar(value = 1)
+        self.result_count = tkinter.Label(mainframe, text = "")
+        self.scrollbar = tkinter.Scrollbar(listframe, orient = tkinter.VERTICAL)
+        self.listbox = tkinter.Listbox(listframe, yscrollcommand = self.scrollbar.set, width = 120, height = 20, font = "Courier")
+        self.selected_file = tkinter.Label(mainframe, text = "")
 
-    # Sort by Dyer so the deduplicator can look at neighbouring games and compare dates...
-    # (the reverse doesn't work, since duplicates might not be next to each other if sorted by date)
+        # Finalise the layout...
 
-    if deduplicate_var.get():
-        gameslist.sort(key = lambda x : x.dyer)
-        deduplicate(gameslist)
-    gameslist.sort(key = lambda x : x.date)
+        tkinter.Label(p1_frame, text = "Player 1 ", font = "Courier").pack(side = tkinter.LEFT)
+        self.p1_box.pack(side = tkinter.RIGHT)
+        p1_frame.pack()
 
-    for game in gameslist:
-        listbox.insert(tkinter.END, game.description)
+        tkinter.Label(p2_frame, text = "Player 2 ", font = "Courier").pack(side = tkinter.LEFT)
+        self.p2_box.pack(side = tkinter.RIGHT)
+        p2_frame.pack()
 
-    s = "{} games found".format(len(gameslist))
-    result_count.config(text = s)
-    return
+        tkinter.Label(ev_frame, text = "   Event ", font = "Courier").pack(side = tkinter.LEFT)
+        self.ev_box.pack(side = tkinter.RIGHT)
+        ev_frame.pack()
 
-def deduplicate(gameslist):
-    for n in range(len(gameslist) - 1, 0, -1):
-        if gameslist[n].dyer == gameslist[n - 1].dyer and gameslist[n].date == gameslist[n - 1].date:
-            gameslist.pop(n)
+        tkinter.Label(dt_frame, text = "    Date ", font = "Courier").pack(side = tkinter.LEFT)
 
-def selection_poll(gameslist):
-    sel = listbox.curselection()
-    if sel:
-        selected_file.config(text = gameslist[sel[0]].full_path)
-    else:
-        selected_file.config(text = "")
-    master.after(100, lambda : selection_poll(gameslist))
+        self.dt_box.pack(side = tkinter.RIGHT)
+        dt_frame.pack()
 
-# -----------------------------------------------------------
+        tkinter.Label(ha_frame, text = "Handicap ", font = "Courier").pack(side = tkinter.LEFT)
 
-gameslist = list()
+        self.ha_box.pack(side = tkinter.RIGHT)
+        ha_frame.pack()
 
-conn = sqlite3.connect(DBFILE)
-c = conn.cursor()
+        tkinter.Checkbutton(mainframe, text="Deduplicate", variable = self.deduplicate_var).pack()
 
-master = tkinter.Tk()
-mainframe = tkinter.Frame(master, borderwidth = 24)
+        tkinter.Button(mainframe, text = "Search", command = lambda : self.searcher()).pack()
+        tkinter.Label(mainframe, text = "").pack()
 
-p1_frame = tkinter.Frame(mainframe)
-tkinter.Label(p1_frame, text = "Player 1 ", font = "Courier").pack(side = tkinter.LEFT)
-p1_box = tkinter.Entry(p1_frame, width = 60)
-p1_box.pack(side = tkinter.RIGHT)
-p1_frame.pack()
+        self.result_count.pack()
 
-p2_frame = tkinter.Frame(mainframe)
-tkinter.Label(p2_frame, text = "Player 2 ", font = "Courier").pack(side = tkinter.LEFT)
-p2_box = tkinter.Entry(p2_frame, width = 60)
-p2_box.pack(side = tkinter.RIGHT)
-p2_frame.pack()
+        self.scrollbar.config(command = self.listbox.yview)
+        self.scrollbar.pack(side = tkinter.RIGHT, fill = tkinter.Y)
+        self.listbox.pack(side = tkinter.LEFT, fill = tkinter.BOTH, expand = 1)
+        listframe.pack()
 
-ev_frame = tkinter.Frame(mainframe)
-tkinter.Label(ev_frame, text = "   Event ", font = "Courier").pack(side = tkinter.LEFT)
-ev_box = tkinter.Entry(ev_frame, width = 60)
-ev_box.pack(side = tkinter.RIGHT)
-ev_frame.pack()
+        self.selected_file.pack()
 
-dt_frame = tkinter.Frame(mainframe)
-tkinter.Label(dt_frame, text = "    Date ", font = "Courier").pack(side = tkinter.LEFT)
-dt_box = tkinter.Entry(dt_frame, width = 60)
-dt_box.pack(side = tkinter.RIGHT)
-dt_frame.pack()
+        for n, prog in enumerate(PROGRAMS):
+            tkinter.Button(launch_frame, text = "Launch in {}".format(PROGRAMS[n][0]), command = lambda x=n : self.launcher(x)).pack(side=tkinter.LEFT)
 
-ha_frame = tkinter.Frame(mainframe)
-tkinter.Label(ha_frame, text = "Handicap ", font = "Courier").pack(side = tkinter.LEFT)
-ha_box = tkinter.Entry(ha_frame, width = 60)
-ha_box.pack(side = tkinter.RIGHT)
-ha_frame.pack()
+        launch_frame.pack()
 
-deduplicate_var = tkinter.IntVar(value = 1)
-tkinter.Checkbutton(mainframe, text="Deduplicate", variable = deduplicate_var).pack()
+        # Done...
 
-tkinter.Button(mainframe, text = "Search", command = lambda : searcher(gameslist)).pack()
-tkinter.Label(mainframe, text = "").pack()
+        mainframe.pack()
 
-result_count = tkinter.Label(mainframe, text = "")
-result_count.pack()
+        self.listbox.bind("<Double-Button-1>", lambda x : self.launcher(0))
 
-listframe = tkinter.Frame(mainframe)
-scrollbar = tkinter.Scrollbar(listframe, orient = tkinter.VERTICAL)
-listbox = tkinter.Listbox(listframe, yscrollcommand = scrollbar.set, width = 120, height = 20, font = "Courier")
-scrollbar.config(command = listbox.yview)
-scrollbar.pack(side = tkinter.RIGHT, fill = tkinter.Y)
-listbox.pack(side = tkinter.LEFT, fill = tkinter.BOTH, expand = 1)
-listframe.pack()
+        self.selection_poll()
+        tkinter.mainloop()
 
-selected_file = tkinter.Label(mainframe, text = "")
-selected_file.pack()
-tkinter.Button(mainframe, text = "Launch", command = lambda : launcher(gameslist)).pack()
+    def launcher(self, n):
+        sel = self.listbox.curselection()
+        if sel:
+            args = []
+            for item in PROGRAMS[n][1]:
+                args.append(item)
+            relative_path = self.gameslist[sel[0]].full_path
+            absolute_path = os.path.abspath(relative_path)
+            args.append(absolute_path)
+            subprocess.Popen(args)
 
-mainframe.pack()
-master.wm_title("Go DB Searcher")
+    def searcher(self):
+        self.gameslist[:] = []
 
-listbox.bind("<Double-Button-1>", lambda x : launcher(gameslist))
+        p1 = self.p1_box.get().strip()
+        p2 = self.p2_box.get().strip()
+        ev = self.ev_box.get().strip()
+        dt = self.dt_box.get().strip()
+        ha = self.ha_box.get().strip()
 
-selection_poll(gameslist)
-tkinter.mainloop()
+        self.listbox.delete(0, tkinter.END)
+
+        name1 = "%" + p1 + "%"
+        name2 = "%" + p2 + "%"
+        event = "%" + ev + "%"
+        date = "%" + dt + "%"
+
+        try:
+            ha_min = int(ha)
+        except:
+            ha_min = 0
+            self.ha_box.delete(0, tkinter.END)
+
+        self.c.execute(
+                    ''' SELECT
+                            path, filename, dyer, PW, PB, RE, HA, EV, DT
+                        FROM
+                            Games
+                        WHERE
+                            ((PB like ? and PW like ?) or (PB like ? and PW like ?))
+                        and
+                            (SZ = 19)
+                        and
+                            (EV like ?)
+                        and
+                            (DT like ?)
+                        and
+                            (HA >= ?)
+                        ORDER
+                            BY DT
+                    ;''',
+                 (name1, name2, name2, name1, event, date, ha_min))
+
+        for row in self.c:
+            game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])
+            self.gameslist.append(game)
+
+        if self.deduplicate_var.get():
+            self.deduplicate()
+        self.gameslist.sort(key = lambda x : x.date)
+
+        for game in self.gameslist:
+            self.listbox.insert(tkinter.END, game.description)
+
+        s = "{} games found".format(len(self.gameslist))
+        self.result_count.config(text = s)
+        return
+
+    def deduplicate(self):
+
+        # Sort by Dyer so the deduplicator can look at neighbouring games and compare dates...
+        # (the reverse doesn't work, since duplicates might not be next to each other if sorted by date)
+
+        self.gameslist.sort(key = lambda x : x.dyer)
+        for n in range(len(self.gameslist) - 1, 0, -1):
+            if self.gameslist[n].dyer == self.gameslist[n - 1].dyer and self.gameslist[n].date == self.gameslist[n - 1].date:
+                self.gameslist.pop(n)
+
+    def selection_poll(self):
+        sel = self.listbox.curselection()
+        if sel:
+            self.selected_file.config(text = self.gameslist[sel[0]].full_path)
+        else:
+            self.selected_file.config(text = "")
+        self.after(100, lambda : self.selection_poll())
+
+if __name__ == "__main__":
+    app = Root()
+    app.mainloop()
