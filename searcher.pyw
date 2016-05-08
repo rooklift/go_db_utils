@@ -98,6 +98,7 @@ def searcher(gameslist):
     p2 = p2_box.get().strip()
     ev = ev_box.get().strip()
     dt = dt_box.get().strip()
+    ha = ha_box.get().strip()
 
     listbox.delete(0, tkinter.END)
 
@@ -105,6 +106,12 @@ def searcher(gameslist):
     name2 = "%" + p2 + "%"
     event = "%" + ev + "%"
     date = "%" + dt + "%"
+
+    try:
+        ha_min = int(ha)
+    except:
+        ha_min = 0
+        ha_box.delete(0, tkinter.END)
 
     c.execute(  '''
                 SELECT
@@ -119,10 +126,12 @@ def searcher(gameslist):
                     (EV like ?)
                 and
                     (DT like ?)
+                and
+                    (HA >= ?)
                 ORDER
                     BY DT
                 ;''',
-             (name1, name2, name2, name1, event, date))
+             (name1, name2, name2, name1, event, date, ha_min))
 
     for row in c:
         game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])
@@ -190,7 +199,11 @@ dt_box = tkinter.Entry(dt_frame, width = 60)
 dt_box.pack(side = tkinter.RIGHT)
 dt_frame.pack()
 
-tkinter.Label(mainframe, text = "").pack()
+ha_frame = tkinter.Frame(mainframe)
+tkinter.Label(ha_frame, text = "Handicap ", font = "Courier").pack(side = tkinter.LEFT)
+ha_box = tkinter.Entry(ha_frame, width = 60)
+ha_box.pack(side = tkinter.RIGHT)
+ha_frame.pack()
 
 deduplicate_var = tkinter.IntVar(value = 1)
 tkinter.Checkbutton(mainframe, text="Deduplicate", variable = deduplicate_var).pack()
@@ -200,7 +213,6 @@ tkinter.Label(mainframe, text = "").pack()
 
 result_count = tkinter.Label(mainframe, text = "")
 result_count.pack()
-tkinter.Label(mainframe, text = "").pack()
 
 listframe = tkinter.Frame(mainframe)
 scrollbar = tkinter.Scrollbar(listframe, orient = tkinter.VERTICAL)
