@@ -154,7 +154,6 @@ class Root(tkinter.Tk):
         tkinter.Checkbutton(mainframe, text="Deduplicate", variable = self.deduplicate_var).pack()
 
         tkinter.Button(mainframe, text = "Search", command = lambda : self.searcher()).pack()
-        tkinter.Label(mainframe, text = "").pack()
 
         self.result_count.pack()
 
@@ -227,8 +226,6 @@ class Root(tkinter.Tk):
                             (DT like ?)
                         and
                             (HA >= ?)
-                        ORDER
-                            BY DT
                     ;''',
                  (name1, name2, name2, name1, event, date, ha_min))
 
