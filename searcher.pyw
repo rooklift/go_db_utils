@@ -2,10 +2,12 @@ import os, re, sqlite3, subprocess, tkinter
 
 PROGRAMS =  [
                 ("Sabaki", ["C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"]),
-                ("Gofish", ["python", "C:\\Users\\Owner\\github\\gofish\\game_editor.pyw"]),
+                ("CGoban", ["C:\\Program Files\\cgoban\\cgoban.exe"]),
+                ("Gofish", ["pythonw", "C:\\Users\\Owner\\github\\gofish\\game_editor.pyw"]),
             ]
 
 DBFILE = "go.db"
+
 
 class Game():
     def __init__(self, path, filename, dyer, PW, PB, RE, HA, EV, DT):
@@ -122,7 +124,7 @@ class Root(tkinter.Tk):
         self.deduplicate_var = tkinter.IntVar(value = 1)
         self.result_count = tkinter.Label(mainframe, text = "")
         self.scrollbar = tkinter.Scrollbar(listframe, orient = tkinter.VERTICAL)
-        self.listbox = tkinter.Listbox(listframe, yscrollcommand = self.scrollbar.set, width = 120, height = 20, font = "Courier")
+        self.listbox = tkinter.Listbox(listframe, yscrollcommand = self.scrollbar.set, width = 150, height = 20, font = "Courier")
         self.selected_file = tkinter.Label(mainframe, text = "")
 
         # Finalise the layout...
@@ -262,6 +264,7 @@ class Root(tkinter.Tk):
         else:
             self.selected_file.config(text = "")
         self.after(100, lambda : self.selection_poll())
+
 
 if __name__ == "__main__":
     app = Root()
