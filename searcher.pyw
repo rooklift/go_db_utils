@@ -37,7 +37,7 @@ class Game():
                         pass
         return date
 
-    @property
+    @property               # This is not the absolute path, but is the "full" path in the sense of including the filename
     def full_path(self):
         return os.path.join(self.path, self.filename)
 
@@ -212,22 +212,26 @@ class Root(tkinter.Tk):
             self.ha_box.delete(0, tkinter.END)
 
         self.c.execute(
-                    ''' SELECT
-                            path, filename, dyer, PW, PB, RE, HA, EV, DT
-                        FROM
-                            Games
-                        WHERE
-                            ((PB like ? and PW like ?) or (PB like ? and PW like ?))
-                        and
-                            (SZ = 19)
-                        and
-                            (EV like ?)
-                        and
-                            (DT like ?)
-                        and
-                            (HA >= ?)
-                    ;''',
-                 (name1, name2, name2, name1, event, date, ha_min))
+            '''
+            SELECT
+                path, filename, dyer, PW, PB, RE, HA, EV, DT
+            FROM
+                Games
+            WHERE
+                (
+                    (PB like ? and PW like ?) or (PB like ? and PW like ?)
+                ) and (
+                    SZ = 19
+                ) and (
+                    EV like ?
+                ) and (
+                    DT like ?
+                ) and (
+                    HA >= ?
+                )
+            ''',
+            (name1, name2, name2, name1, event, date, ha_min)
+        )
 
         for row in self.c:
             game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])

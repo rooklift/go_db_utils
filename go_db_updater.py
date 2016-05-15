@@ -28,7 +28,8 @@ except:
 
 # Make a set of all files in the database...
 
-print("Noting all files in database")
+print("Noting all files in database...", end="")
+sys.stdout.flush()
 
 db_known_files = set()
 
@@ -37,14 +38,19 @@ c.execute(
             SELECT path, filename from Games;
     '''
 )
+print(" SQL query complete, making set...", end="")
+sys.stdout.flush()
 
 for row in c:
     full_path = os.path.join(row[0], row[1])
     db_known_files.add(full_path)
 
+print(" done")
+
 # Make a set of all files in the directory structure...
 
 print("Noting all files in the directories.", end="")
+sys.stdout.flush()
 
 count = 0
 
