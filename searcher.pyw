@@ -1,96 +1,14 @@
-import os, re, sqlite3, subprocess, tkinter
+import os, sqlite3, subprocess, tkinter
+import gofish, go_db
 
 PROGRAMS =  [
                 ("Sabaki", ["C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"]),
                 ("CGoban", ["C:\\Program Files\\cgoban\\cgoban.exe"]),
                 ("Gofish", ["pythonw", "C:\\Users\\Owner\\github\\gofish\\game_editor.pyw"]),
+                ("CrazyStone", ["C:\\Program Files (x86)\\UNBALANCE\\Crazy Stone Deep Learning\\CrazyStoneDeepLearning.exe"]),
             ]
 
 DBFILE = "go.db"
-
-
-class Game():
-    def __init__(self, path, filename, dyer, PW, PB, RE, HA, EV, DT):
-        self.path = path
-        self.filename = filename
-        self.dyer = dyer
-        self.PW = PW
-        self.PB = PB
-        self.RE = RE
-        self.HA = HA
-        self.EV = EV
-        self.DT = DT
-
-    @property
-    def date(self):
-        date = ""
-        if self.DT:
-            try:
-                date = re.search('''.?(\d\d\d\d-\d\d-\d\d).?''', self.DT).group(1)
-            except:
-                try:
-                    date = re.search('''.?(\d\d\d\d-\d\d).?''', self.DT).group(1)
-                except:
-                    try:
-                        date = re.search('''.?(\d\d\d\d).?''', self.DT).group(1)
-                    except:
-                        pass
-        return date
-
-    @property               # This is not the absolute path, but is the "full" path in the sense of including the filename
-    def full_path(self):
-        return os.path.join(self.path, self.filename)
-
-    @property
-    def description(self):
-
-        direction = " ? "
-        result = ""
-        if self.RE:
-
-            if "B+" in self.RE:
-                direction = " < "
-            elif "W+" in self.RE:
-                direction = " > "
-
-            if "B+R" in self.RE:
-                result = "B+R"
-            elif "B+T" in self.RE:
-                result = "B+T"
-            elif "W+R" in self.RE:
-                result = "W+R"
-            elif "W+T" in self.RE:
-                result = "W+T"
-            elif "B+" in self.RE:
-                result = self.RE.split()[0]     # Some GoGoD results say "B+4 (moves after 150 not known)" or suchlike
-                if "B+" not in result:
-                    result = "B+"
-            elif "W+" in self.RE:
-                result = self.RE.split()[0]
-                if "W+" not in result:
-                    result = "W+"
-
-        if self.HA:
-            handicap = "(H{})".format(self.HA)
-        else:
-            handicap = ""
-
-        if self.PW:
-            PW = self.PW
-        else:
-            PW = ""
-
-        if self.PB:
-            PB = self.PB
-        else:
-            PB = ""
-
-        if self.EV:
-            event = self.EV
-        else:
-            event = ""
-
-        return "{:10}   {:7} {:24} {} {:24}  {:5} {} ".format(self.date[0:10], result[0:7], PW[0:24], direction, PB[0:24], handicap, event)
 
 
 class Root(tkinter.Tk):
@@ -109,6 +27,8 @@ class Root(tkinter.Tk):
         ev_frame = tkinter.Frame(mainframe)
         dt_frame = tkinter.Frame(mainframe)
         ha_frame = tkinter.Frame(mainframe)
+        path_frame = tkinter.Frame(mainframe)
+        filename_frame = tkinter.Frame(mainframe)
         launch_frame = tkinter.Frame(mainframe)
 
         # Attributes...
@@ -121,6 +41,8 @@ class Root(tkinter.Tk):
         self.ev_box = tkinter.Entry(ev_frame, width = 60)
         self.dt_box = tkinter.Entry(dt_frame, width = 60)
         self.ha_box = tkinter.Entry(ha_frame, width = 60)
+        self.path_box = tkinter.Entry(path_frame, width = 60)
+        self.filename_box = tkinter.Entry(filename_frame, width = 60)
         self.deduplicate_var = tkinter.IntVar(value = 1)
         self.result_count = tkinter.Label(mainframe, text = "")
         self.scrollbar = tkinter.Scrollbar(listframe, orient = tkinter.VERTICAL)
@@ -142,14 +64,20 @@ class Root(tkinter.Tk):
         ev_frame.pack()
 
         tkinter.Label(dt_frame, text = "    Date ", font = "Courier").pack(side = tkinter.LEFT)
-
         self.dt_box.pack(side = tkinter.RIGHT)
         dt_frame.pack()
 
         tkinter.Label(ha_frame, text = "Handicap ", font = "Courier").pack(side = tkinter.LEFT)
-
         self.ha_box.pack(side = tkinter.RIGHT)
         ha_frame.pack()
+
+        tkinter.Label(path_frame, text = "    Path ", font = "Courier").pack(side = tkinter.LEFT)
+        self.path_box.pack(side = tkinter.RIGHT)
+        path_frame.pack()
+
+        tkinter.Label(filename_frame, text = "Filename ", font = "Courier").pack(side = tkinter.LEFT)
+        self.filename_box.pack(side = tkinter.RIGHT)
+        filename_frame.pack()
 
         tkinter.Checkbutton(mainframe, text="Deduplicate", variable = self.deduplicate_var).pack()
 
@@ -163,6 +91,8 @@ class Root(tkinter.Tk):
         listframe.pack()
 
         self.selected_file.pack()
+
+        tkinter.Button(launch_frame, text = "RE-IMPORT FILE", command = lambda: self.update_file_info()).pack(side=tkinter.LEFT)
 
         for n, prog in enumerate(PROGRAMS):
             tkinter.Button(launch_frame, text = "Launch in {}".format(PROGRAMS[n][0]), command = lambda x=n : self.launcher(x)).pack(side=tkinter.LEFT)
@@ -189,21 +119,58 @@ class Root(tkinter.Tk):
             args.append(absolute_path)
             subprocess.Popen(args)
 
-    def searcher(self):
-        self.gameslist[:] = []
+    def update_file_info(self):
 
+        sel = self.listbox.curselection()
+
+        if sel:
+
+            old_record = self.gameslist[sel[0]]
+
+            try:
+
+                sgfroot = gofish.load(old_record.full_path)
+                new_record = go_db.record_from_sgf(sgfroot, old_record.full_path)
+
+                go_db.delete_game_from_db(old_record.full_path, self.c)         # Delete...
+                go_db.add_game_to_db(new_record, old_record.full_path, self.c)  # Then add it again (we should really update, meh)
+
+                self.gameslist[sel[0]] = new_record
+
+            except (FileNotFoundError, gofish.BadBoardSize, gofish.ParserFail):
+
+                go_db.delete_game_from_db(game.full_path, self.c)
+                self.gameslist.pop(sel[0])
+
+            self.conn.commit()
+            self.refresh_listbox_from_gameslist()
+
+    def refresh_listbox_from_gameslist(self):
+
+        self.listbox.delete(0, tkinter.END)
+
+        for game in self.gameslist:
+            self.listbox.insert(tkinter.END, game.description)
+
+        s = "{} games found".format(len(self.gameslist))
+        self.result_count.config(text = s)
+
+    def searcher(self):
         p1 = self.p1_box.get().strip()
         p2 = self.p2_box.get().strip()
         ev = self.ev_box.get().strip()
         dt = self.dt_box.get().strip()
         ha = self.ha_box.get().strip()
+        path = self.path_box.get().strip()
+        filename = self.filename_box.get().strip()
 
-        self.listbox.delete(0, tkinter.END)
+        p1 = "%" + p1 + "%"
+        p2 = "%" + p2 + "%"
+        ev = "%" + ev + "%"
+        dt = "%" + dt + "%"
 
-        name1 = "%" + p1 + "%"
-        name2 = "%" + p2 + "%"
-        event = "%" + ev + "%"
-        date = "%" + dt + "%"
+        path = "%" + path + "%"
+        filename = "%" + filename + "%"
 
         try:
             ha_min = int(ha)
@@ -214,7 +181,7 @@ class Root(tkinter.Tk):
         self.c.execute(
             '''
             SELECT
-                path, filename, dyer, PW, PB, RE, HA, EV, DT
+                path, filename, dyer, PW, PB, RE, HA, EV, DT, SZ
             FROM
                 Games
             WHERE
@@ -228,24 +195,28 @@ class Root(tkinter.Tk):
                     DT like ?
                 ) and (
                     HA >= ?
+                ) and (
+                    path like ?
+                ) and (
+                    filename like ?
                 )
             ''',
-            (name1, name2, name2, name1, event, date, ha_min)
+            (p1, p2, p2, p1, ev, dt, ha_min, path, filename)
         )
 
+        self.gameslist[:] = []
+
         for row in self.c:
-            game = Game(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4], RE = row[5], HA = row[6], EV = row[7], DT = row[8])
+            game = go_db.Record(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4],
+                                RE = row[5], HA = row[6], EV = row[7], DT = row[8], SZ = row[9])
             self.gameslist.append(game)
 
         if self.deduplicate_var.get():
             self.deduplicate()
-        self.gameslist.sort(key = lambda x : x.date)
+        self.gameslist.sort(key = lambda x : x.canonical_date)
 
-        for game in self.gameslist:
-            self.listbox.insert(tkinter.END, game.description)
+        self.refresh_listbox_from_gameslist()
 
-        s = "{} games found".format(len(self.gameslist))
-        self.result_count.config(text = s)
         return
 
     def deduplicate(self):
@@ -255,7 +226,7 @@ class Root(tkinter.Tk):
 
         self.gameslist.sort(key = lambda x : x.dyer)
         for n in range(len(self.gameslist) - 1, 0, -1):
-            if self.gameslist[n].dyer == self.gameslist[n - 1].dyer and self.gameslist[n].date == self.gameslist[n - 1].date:
+            if self.gameslist[n].dyer == self.gameslist[n - 1].dyer and self.gameslist[n].canonical_date == self.gameslist[n - 1].canonical_date:
                 self.gameslist.pop(n)
 
     def selection_poll(self):
