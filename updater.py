@@ -93,7 +93,10 @@ def main():
         new_record = go_db.record_from_sgf(sgfroot, full_path)
         go_db.add_game_to_db(new_record, full_path, c)
 
-        print("  ", os.path.basename(full_path))
+        try:
+            print("  ", os.path.basename(full_path))
+        except:
+            print("   <unprintable>")
         files_added += 1
 
     print("{} files added to database".format(files_added))
@@ -108,7 +111,10 @@ def main():
 
     for full_path in files_to_del_from_db:
         go_db.delete_game_from_db(full_path, c)
-        print("  ", os.path.basename(full_path))
+        try:
+            print("  ", os.path.basename(full_path))
+        except:
+            print("   <unprintable>")
         files_removed += 1
 
     print("{} files removed from database".format(files_removed))
