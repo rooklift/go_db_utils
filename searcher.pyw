@@ -4,7 +4,7 @@ import gofish, go_db
 PROGRAMS =  [
                 ("Sabaki", ["C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"]),
                 ("CGoban", ["C:\\Program Files\\cgoban\\cgoban.exe"]),
-                ("Gofish", ["pythonw", "C:\\Users\\Owner\\github\\gofish\\game_editor.pyw"]),
+                ("Gofish", ["pythonw", "C:\\Users\\Owner\\github\\gofish\\game_editor.py"]),
                 ("CrazyStone", ["C:\\Program Files (x86)\\UNBALANCE\\Crazy Stone Deep Learning\\CrazyStoneDeepLearning.exe"]),
             ]
 
@@ -213,7 +213,7 @@ class Root(tkinter.Tk):
 
         if self.deduplicate_var.get():
             self.deduplicate()
-        self.gameslist.sort(key = lambda x : x.canonical_date)
+        self.gameslist.sort(key = lambda x : [x.canonical_date, x.filename])
 
         self.refresh_listbox_from_gameslist()
 
