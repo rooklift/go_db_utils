@@ -213,7 +213,7 @@ class Root(tkinter.Tk):
 
         if self.deduplicate_var.get():
             self.deduplicate()
-        self.gameslist.sort(key = lambda x : [x.canonical_date, x.filename])
+        self.gameslist.sort(key = lambda x : [x.canonical_date, x.EV, x.filename])
 
         self.refresh_listbox_from_gameslist()
 
