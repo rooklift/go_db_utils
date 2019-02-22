@@ -3,7 +3,7 @@ import gofish, go_db
 
 PROGRAMS =  [
                 ("Sabaki", ["C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"]),
-                ("CGoban", ["C:\\Program Files\\cgoban\\cgoban.exe"]),
+                ("CGoban", ["C:\\Program Files (x86)\\cgoban\\cgoban.exe"]),
                 ("Gofish", ["pythonw", "C:\\Users\\Owner\\github\\gofish\\game_editor.py"]),
                 ("CrazyStone", ["C:\\Program Files (x86)\\UNBALANCE\\Crazy Stone Deep Learning\\CrazyStoneDeepLearning.exe"]),
             ]

@@ -26,7 +26,10 @@ class Record():
                     try:
                         canonical_date = re.search('''.?(\d\d\d\d).?''', self.DT).group(1)
                     except:
-                        pass
+                        try:
+                        	canonical_date = "0" + re.search('''.?(\d\d\d).?''', self.DT).group(1)
+                        except:
+                        	pass
         return canonical_date
 
     @property               # This is not the absolute path, but is the "full" path in the sense of including the filename
