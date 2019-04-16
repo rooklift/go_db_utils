@@ -86,7 +86,7 @@ def main():
 
     for full_path in files_to_add_list:
         try:
-            sgfroot = gofish.load(full_path)
+            sgfroot = gofish.load_sgf_mainline(full_path)
         except:
             continue
 
