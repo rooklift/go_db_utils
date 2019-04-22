@@ -29,6 +29,7 @@ class Root(tkinter.Tk):
         ha_frame = tkinter.Frame(mainframe)
         path_frame = tkinter.Frame(mainframe)
         filename_frame = tkinter.Frame(mainframe)
+        dyer_frame = tkinter.Frame(mainframe)
         launch_frame = tkinter.Frame(mainframe)
 
         # Attributes...
@@ -43,7 +44,8 @@ class Root(tkinter.Tk):
         self.ha_box = tkinter.Entry(ha_frame, width = 60)
         self.path_box = tkinter.Entry(path_frame, width = 60)
         self.filename_box = tkinter.Entry(filename_frame, width = 60)
-        self.deduplicate_var = tkinter.IntVar(value = 1)
+        self.dyer_box = tkinter.Entry(dyer_frame, width = 60)
+        self.deduplicate_var = tkinter.IntVar(value = 0)
         self.result_count = tkinter.Label(mainframe, text = "")
         self.scrollbar = tkinter.Scrollbar(listframe, orient = tkinter.VERTICAL)
         self.listbox = tkinter.Listbox(listframe, yscrollcommand = self.scrollbar.set, width = 150, height = 20, font = "Courier")
@@ -78,6 +80,10 @@ class Root(tkinter.Tk):
         tkinter.Label(filename_frame, text = "Filename ", font = "Courier").pack(side = tkinter.LEFT)
         self.filename_box.pack(side = tkinter.RIGHT)
         filename_frame.pack()
+
+        tkinter.Label(dyer_frame, text = "    Dyer ", font = "Courier").pack(side = tkinter.LEFT)
+        self.dyer_box.pack(side = tkinter.RIGHT)
+        dyer_frame.pack()
 
         tkinter.Checkbutton(mainframe, text="Deduplicate", variable = self.deduplicate_var).pack()
 
@@ -163,6 +169,7 @@ class Root(tkinter.Tk):
         ha = self.ha_box.get().strip()
         path = self.path_box.get().strip()
         filename = self.filename_box.get().strip()
+        dyer = self.dyer_box.get().strip()
 
         p1 = "%" + p1 + "%"
         p2 = "%" + p2 + "%"
@@ -171,6 +178,7 @@ class Root(tkinter.Tk):
 
         path = "%" + path + "%"
         filename = "%" + filename + "%"
+        dyer = "%" + dyer + "%"
 
         try:
             ha_min = int(ha)
@@ -199,9 +207,11 @@ class Root(tkinter.Tk):
                     path like ?
                 ) and (
                     filename like ?
+                ) and (
+                    dyer like ?
                 )
             ''',
-            (p1, p2, p2, p1, ev, dt, ha_min, path, filename)
+            (p1, p2, p2, p1, ev, dt, ha_min, path, filename, dyer)
         )
 
         self.gameslist[:] = []
