@@ -1,6 +1,6 @@
 __pycache__/
 archive/
 gofish/
-misc_scripts/
+misc/
 *.db
 go.db-journal
