@@ -1,0 +1,3 @@
+Use consistent path separators, e.g. by importing posixpath and always using it instead of os.path
+
+Can convert to Windows paths at launch.
