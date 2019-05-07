@@ -1,11 +1,11 @@
-import os, sqlite3, subprocess, tkinter
+#!/usr/bin/env python3
+
+import os, sqlite3, subprocess, sys, tkinter
 import gofish, go_db
 
 PROGRAMS =  [
-                ("Sabaki", ["C:\\Programs (self-installed)\\Sabaki\\sabaki.exe"]),
-                ("CGoban", ["C:\\Program Files (x86)\\cgoban\\cgoban.exe"]),
-                ("Gofish", ["pythonw", "C:\\Users\\Owner\\github\\gofish\\game_editor.py"]),
-                ("CrazyStone", ["C:\\Program Files (x86)\\UNBALANCE\\Crazy Stone Deep Learning\\CrazyStoneDeepLearning.exe"]),
+                ("Sabaki", ["/mnt/sidereal/github/Sabaki/dist/linux-unpacked/sabaki"]),
+                ("Gofish", ["python3", "/mnt/sidereal/github//gofish/game_editor.py"]),
             ]
 
 DBFILE = "go.db"
@@ -121,6 +121,8 @@ class Root(tkinter.Tk):
             for item in PROGRAMS[n][1]:
                 args.append(item)
             relative_path = self.gameslist[sel[0]].full_path
+            relative_path = relative_path.replace("\\", "/")        # Convert \ to / for Linux
+            relative_path = os.path.normpath(relative_path)         # In Windows, convert / to \
             absolute_path = os.path.abspath(relative_path)
             args.append(absolute_path)
             subprocess.Popen(args)
@@ -135,17 +137,21 @@ class Root(tkinter.Tk):
 
             try:
 
-                sgfroot = gofish.load(old_record.full_path)
-                new_record = go_db.record_from_sgf(sgfroot, old_record.full_path)
+                relative_path = old_record.full_path
+                relative_path = relative_path.replace("\\", "/")    # Convert \ to / for Linux
+                relative_path = os.path.normpath(relative_path)     # In Windows, convert / to \
 
-                go_db.delete_game_from_db(old_record.full_path, self.c)         # Delete...
-                go_db.add_game_to_db(new_record, old_record.full_path, self.c)  # Then add it again (we should really update, meh)
+                sgfroot = gofish.load(relative_path)
+                new_record = go_db.record_from_sgf(sgfroot, relative_path)
+
+                go_db.delete_game_from_db(old_record.full_path, self.c)  # Delete...
+                go_db.add_game_to_db(new_record, relative_path, self.c)  # Then add it again (we should really update, meh)
 
                 self.gameslist[sel[0]] = new_record
 
             except (FileNotFoundError, gofish.BadBoardSize, gofish.ParserFail):
 
-                go_db.delete_game_from_db(game.full_path, self.c)
+                go_db.delete_game_from_db(old_record.full_path, self.c)
                 self.gameslist.pop(sel[0])
 
             self.conn.commit()
