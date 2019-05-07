@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, sqlite3, sys
+import os, posixpath, sqlite3, sys
 import gofish, go_db
 
 
@@ -47,7 +47,7 @@ def main():
     sys.stdout.flush()
 
     for row in c:
-        full_path = os.path.join(row[0], row[1])
+        full_path = posixpath.join(row[0], row[1])                              # Always use / separators
         db_known_files.add(full_path)
 
     print(" done")
@@ -64,7 +64,8 @@ def main():
     for rootdir in rootdirs:
         for root, dirs, files in os.walk(rootdir):
             for f in files:
-                full_path = os.path.join(root, f)
+
+                full_path = posixpath.join(root.replace("\\", "/"), f)          # Always use / separators
                 dir_known_files.add(full_path)
                 count += 1
                 if count % 10000 == 0:

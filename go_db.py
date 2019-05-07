@@ -149,6 +149,7 @@ def add_game_to_db(game, full_path, cursor):
 
 
 def delete_game_from_db(full_path, cursor):
+    
     path, filename = os.path.split(full_path)
 
     command = '''

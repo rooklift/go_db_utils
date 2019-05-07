@@ -121,7 +121,6 @@ class Root(tkinter.Tk):
             for item in PROGRAMS[n][1]:
                 args.append(item)
             relative_path = self.gameslist[sel[0]].full_path
-            relative_path = relative_path.replace("\\", "/")        # Convert \ to / for Linux
             relative_path = os.path.normpath(relative_path)         # In Windows, convert / to \
             absolute_path = os.path.abspath(relative_path)
             args.append(absolute_path)
@@ -138,7 +137,6 @@ class Root(tkinter.Tk):
             try:
 
                 relative_path = old_record.full_path
-                relative_path = relative_path.replace("\\", "/")    # Convert \ to / for Linux
                 relative_path = os.path.normpath(relative_path)     # In Windows, convert / to \
 
                 sgfroot = gofish.load(relative_path)
