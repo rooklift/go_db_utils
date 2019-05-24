@@ -4,8 +4,8 @@ import os, sqlite3, subprocess, sys, tkinter
 import gofish, go_db
 
 PROGRAMS =  [
-                ("Sabaki", ["/mnt/sidereal/github/Sabaki/dist/linux-unpacked/sabaki"]),
-                ("Gofish", ["python3", "/mnt/sidereal/github//gofish/game_editor.py"]),
+                ("Sabaki", ["C:\\Programs (self-installed)\\Sabaki\\Sabaki.exe"]),
+                ("Gofish", ["python", "C:\\Users\\Owner\\github\\gofish\\game_editor.py"]),
             ]
 
 DBFILE = "go.db"
