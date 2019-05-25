@@ -1,8 +1,8 @@
-import os, re
+import os, posixpath, re
 
 class Record():
     def __init__(self, *, path, filename, dyer, PW, PB, RE, HA, EV, DT, SZ):
-        self.path = path
+        self.path = path.replace("\\", "/")
         self.filename = filename
         self.dyer = dyer
         self.PW = PW
@@ -34,7 +34,7 @@ class Record():
 
     @property               # This is not the absolute path, but is the "full" path in the sense of including the filename
     def full_path(self):
-        return os.path.join(self.path, self.filename)
+        return posixpath.join(self.path, self.filename)
 
     @property
     def description(self):
@@ -133,12 +133,14 @@ def record_from_sgf(sgfroot, full_path):
         properties["EV"] = ""
 
     path, filename = os.path.split(full_path)
+    path = path.replace("\\", "/")
     return Record(path = path, filename = filename, **properties)
 
 
 def add_game_to_db(game, full_path, cursor):
 
     path, filename = os.path.split(full_path)
+    path = path.replace("\\", "/")
 
     command = '''
                 INSERT INTO Games(path, filename, dyer, SZ, HA, PB, PW, RE, DT, EV)
@@ -151,6 +153,7 @@ def add_game_to_db(game, full_path, cursor):
 def delete_game_from_db(full_path, cursor):
     
     path, filename = os.path.split(full_path)
+    path = path.replace("\\", "/")
 
     command = '''
                 DELETE FROM Games
