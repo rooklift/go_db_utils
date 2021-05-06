@@ -4,7 +4,7 @@ import os, sqlite3, subprocess, sys, tkinter
 import gofish, go_db
 
 PROGRAMS =  [
-				("Ogatak", ["C:\\Programs (self-installed)\\Ogatak\\ogatak.exe"]),
+                ("Ogatak", ["C:\\Programs (self-installed)\\Ogatak\\ogatak.exe"]),
                 ("Sabaki", ["C:\\Programs (self-installed)\\Sabaki\\Sabaki.exe"]),
                 ("Gofish", ["python", "C:\\Users\\Owner\\github\\gofish\\game_editor.py"]),
             ]
