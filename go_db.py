@@ -44,9 +44,9 @@ class Record():
         if self.RE:
 
             if "B+" in self.RE:
-                direction = " < "
-            elif "W+" in self.RE:
                 direction = " > "
+            elif "W+" in self.RE:
+                direction = " < "
 
             if "B+R" in self.RE:
                 result = "B+R"
@@ -85,7 +85,7 @@ class Record():
         else:
             event = ""
 
-        return "{:10}   {:7} {:24} {} {:24}  {:5} {} ".format(self.canonical_date[0:10], result[0:7], PW[0:24], direction, PB[0:24], handicap, event)
+        return "{:10}   {:7} {:24} {} {:24}  {:5} {} ".format(self.canonical_date[0:10], result[0:7], PB[0:24], direction, PW[0:24], handicap, event)
 
 
 def record_from_sgf(sgfroot, full_path):
@@ -151,7 +151,7 @@ def add_game_to_db(game, full_path, cursor):
 
 
 def delete_game_from_db(full_path, cursor):
-    
+
     path, filename = os.path.split(full_path)
     path = path.replace("\\", "/")
 
