@@ -4,6 +4,7 @@ import json, os.path, sqlite3, sys
 import go_db
 
 # This takes as argument the output of github.com/fohristiwhirl/sgf/summaries.go
+# Not really necessary since I sped up gofish
 
 def main():
 
