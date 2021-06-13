@@ -194,7 +194,7 @@ class Root(tkinter.Tk):
         self.c.execute(
             '''
             SELECT
-                path, filename, dyer, PW, PB, RE, HA, EV, DT, SZ
+                path, filename, dyer, PB, PW, BR, WR, RE, HA, EV, DT, SZ
             FROM
                 Games
             WHERE
@@ -222,8 +222,8 @@ class Root(tkinter.Tk):
         self.gameslist[:] = []
 
         for row in self.c:
-            game = go_db.Record(path = row[0], filename = row[1], dyer = row[2], PW = row[3], PB = row[4],
-                                RE = row[5], HA = row[6], EV = row[7], DT = row[8], SZ = row[9])
+            game = go_db.Record(path = row[0], filename = row[1], dyer = row[2], PB = row[3], PW = row[4], BR = row[5], WR = row[6],
+                                RE = row[7], HA = row[8], EV = row[9], DT = row[10], SZ = row[11])
             self.gameslist.append(game)
 
         if self.deduplicate_var.get():

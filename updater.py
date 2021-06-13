@@ -24,6 +24,8 @@ def main():
                         HA int,
                         PB text,
                         PW text,
+                        BR text,
+                        WR text,
                         RE text,
                         DT text,
                         EV text);
