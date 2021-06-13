@@ -11,6 +11,28 @@ def main():
     conn = sqlite3.connect('go.db')
     c = conn.cursor()
 
+    # Create table if needed...
+
+    try:
+        c.execute(
+            '''
+                    CREATE TABLE Games (
+                        path text,
+                        filename text,
+                        dyer text,
+                        SZ int,
+                        HA int,
+                        PB text,
+                        PW text,
+                        BR text,
+                        WR text,
+                        RE text,
+                        DT text,
+                        EV text);
+            ''')
+    except:
+        pass
+
     # Make a set of all files in the database...
 
     print("Noting all files in database...", end="")
