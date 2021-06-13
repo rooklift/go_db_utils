@@ -34,7 +34,7 @@ class Record():
 							pass
 		return canonical_date
 
-	@property               # This is not the absolute path, but is the "full" path in the sense of including the filename
+	@property
 	def full_path(self):
 		return posixpath.join(self.path, self.filename)
 
@@ -136,21 +136,19 @@ def record_from_sgf(sgfroot, full_path):
 	except:
 		properties["EV"] = ""
 
-	path, filename = os.path.split(full_path)
-	path = path.replace("\\", "/")
-	return Record(path = path, filename = filename, **properties)
+	properties["path"] = os.path.dirname(full_path)
+	properties["filename"] = os.path.basename(full_path)
+
+	return Record(**properties)
 
 
-def add_game_to_db(game, full_path, cursor):
-
-	path, filename = os.path.split(full_path)
-	path = path.replace("\\", "/")
+def add_game_to_db(game, cursor):
 
 	command = '''
 				INSERT INTO Games(path, filename, dyer, SZ, HA, PB, PW, BR, WR, RE, DT, EV)
 				VALUES(?,?,?,?,?,?,?,?,?,?,?,?);
 			  '''
-	fields = (path, filename, game.dyer, game.SZ, game.HA, game.PB, game.PW, game.BR, game.WR, game.RE, game.DT, game.EV)
+	fields = (game.path, game.filename, game.dyer, game.SZ, game.HA, game.PB, game.PW, game.BR, game.WR, game.RE, game.DT, game.EV)
 	cursor.execute(command, fields)
 
 
