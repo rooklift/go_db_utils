@@ -11,28 +11,6 @@ def main():
     conn = sqlite3.connect('go.db')
     c = conn.cursor()
 
-    # Create table if needed...
-
-    try:
-        c.execute(
-            '''
-                    CREATE TABLE Games (
-                        path text,
-                        filename text,
-                        dyer text,
-                        SZ int,
-                        HA int,
-                        PB text,
-                        PW text,
-                        BR text,
-                        WR text,
-                        RE text,
-                        DT text,
-                        EV text);
-            ''')
-    except:
-        pass
-
     # Make a set of all files in the database...
 
     print("Noting all files in database...", end="")
@@ -49,7 +27,7 @@ def main():
     sys.stdout.flush()
 
     for row in c:
-        full_path = posixpath.join(row[0], row[1])                              # Always use / separators
+        full_path = posixpath.join(row[0], row[1])                                          # Always use / separators
         db_known_files.add(full_path)
 
     print(" done")
@@ -67,7 +45,7 @@ def main():
         for root, dirs, files in os.walk(rootdir):
             for f in files:
 
-                full_path = posixpath.join(root.replace("\\", "/"), f)          # Always use / separators
+                full_path = os.path.abspath(os.path.join(root, f)).replace("\\", "/")       # Always use / separators
                 dir_known_files.add(full_path)
                 count += 1
                 if count % 10000 == 0:
@@ -96,7 +74,7 @@ def main():
             continue
 
         new_record = go_db.record_from_sgf(sgfroot, full_path)
-        go_db.add_game_to_db(new_record, full_path, c)
+        go_db.add_game_to_db(new_record, c)
 
         try:
             s = "  {}".format(os.path.basename(full_path))
