@@ -137,14 +137,11 @@ class Root(tkinter.Tk):
 
             try:
 
-                relative_path = old_record.full_path
-                relative_path = os.path.normpath(relative_path)     # In Windows, convert / to \
-
-                sgfroot = gofish.load(relative_path)
-                new_record = go_db.record_from_sgf(sgfroot, relative_path)
+                sgfroot = gofish.load(old_record.full_path)
+                new_record = go_db.record_from_sgf(sgfroot, old_record.full_path)
 
                 go_db.delete_game_from_db(old_record.full_path, self.c)  # Delete...
-                go_db.add_game_to_db(new_record, relative_path, self.c)  # Then add it again (we should really update, meh)
+                go_db.add_game_to_db(new_record, self.c)                 # Then add it again (we should really update, meh)
 
                 self.gameslist[sel[0]] = new_record
 
