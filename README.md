@@ -6,4 +6,3 @@ Some helpers for managing a database of Go games. (Currently I have GoGoD and Go
 
 Building the database takes quite a while (well, I have 140k files), mostly due to the calculation of a "Dyer signature" for each game, which is used by the searcher for deduplication purposes.
 
-![Searcher Screenshot](/screenshot.png?raw=true)
