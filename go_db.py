@@ -1,4 +1,4 @@
-import os, posixpath, re
+import os, re
 
 class Record():
 	def __init__(self, *, path, filename, dyer, PB, PW, BR, WR, RE, HA, EV, DT, SZ):
@@ -36,7 +36,7 @@ class Record():
 
 	@property
 	def full_path(self):
-		return posixpath.join(self.path, self.filename)
+		return os.path.join(self.path, self.filename).replace("\\", "/")
 
 	@property
 	def description(self):
@@ -136,7 +136,7 @@ def record_from_sgf(sgfroot, full_path):
 	except:
 		properties["EV"] = ""
 
-	properties["path"] = os.path.dirname(full_path)
+	properties["path"] = os.path.dirname(full_path).replace("\\", "/")
 	properties["filename"] = os.path.basename(full_path)
 
 	return Record(**properties)

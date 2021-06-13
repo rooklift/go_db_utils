@@ -121,10 +121,7 @@ class Root(tkinter.Tk):
             args = []
             for item in PROGRAMS[n][1]:
                 args.append(item)
-            relative_path = self.gameslist[sel[0]].full_path
-            relative_path = os.path.normpath(relative_path)         # In Windows, convert / to \
-            absolute_path = os.path.abspath(relative_path)
-            args.append(absolute_path)
+            args.append(self.gameslist[sel[0]].full_path)
             subprocess.Popen(args)
 
     def update_file_info(self):
