@@ -92,47 +92,47 @@ def record_from_sgf(sgfroot, full_path):
 	properties["dyer"] = sgfroot.dyer()
 
 	try:
-		properties["SZ"] = int(sgfroot.properties["SZ"][0])
+		properties["SZ"] = int(sgfroot.props["SZ"][0])
 	except:
 		properties["SZ"] = 19
 
 	try:
-		properties["HA"] = int(sgfroot.properties["HA"][0])
+		properties["HA"] = int(sgfroot.props["HA"][0])
 	except:
 		properties["HA"] = 0
 
 	try:
-		properties["PB"] = sgfroot.properties["PB"][0].strip()
+		properties["PB"] = sgfroot.props["PB"][0].strip()
 	except:
 		properties["PB"] = ""
 
 	try:
-		properties["PW"] = sgfroot.properties["PW"][0].strip()
+		properties["PW"] = sgfroot.props["PW"][0].strip()
 	except:
 		properties["PW"] = ""
 
 	try:
-		properties["BR"] = sgfroot.properties["BR"][0].strip()
+		properties["BR"] = sgfroot.props["BR"][0].strip()
 	except:
 		properties["BR"] = ""
 
 	try:
-		properties["WR"] = sgfroot.properties["WR"][0].strip()
+		properties["WR"] = sgfroot.props["WR"][0].strip()
 	except:
 		properties["WR"] = ""
 
 	try:
-		properties["RE"] = sgfroot.properties["RE"][0].strip()
+		properties["RE"] = sgfroot.props["RE"][0].strip()
 	except:
 		properties["RE"] = ""
 
 	try:
-		properties["DT"] = sgfroot.properties["DT"][0].strip()
+		properties["DT"] = sgfroot.props["DT"][0].strip()
 	except:
 		properties["DT"] = ""
 
 	try:
-		properties["EV"] = sgfroot.properties["EV"][0].strip()
+		properties["EV"] = sgfroot.props["EV"][0].strip()
 	except:
 		properties["EV"] = ""
 
