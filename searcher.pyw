@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
 import os, sqlite3, subprocess, sys, tkinter
-import gofish, go_db
+import gofish2, go_db
 
 PROGRAMS =  [
                 ("Ogatak", ["C:\\Programs (self-installed)\\Ogatak\\ogatak.exe"]),
                 ("Sabaki", ["C:\\Programs (self-installed)\\Sabaki\\Sabaki.exe"]),
-                ("Gofish", ["python", "C:\\Users\\Owner\\github\\gofish\\game_editor.py"]),
             ]
 
 DBFILE = "go.db"
@@ -134,7 +133,7 @@ class Root(tkinter.Tk):
 
             try:
 
-                sgfroot = gofish.load(old_record.full_path)
+                sgfroot = gofish2.load(old_record.full_path)[0]
                 new_record = go_db.record_from_sgf(sgfroot, old_record.full_path)
 
                 go_db.delete_game_from_db(old_record.full_path, self.c)  # Delete...
@@ -142,7 +141,7 @@ class Root(tkinter.Tk):
 
                 self.gameslist[sel[0]] = new_record
 
-            except (FileNotFoundError, gofish.BadBoardSize, gofish.ParserFail):
+            except (FileNotFoundError, gofish2.ParserFail):
 
                 go_db.delete_game_from_db(old_record.full_path, self.c)
                 self.gameslist.pop(sel[0])

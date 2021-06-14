@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import os, sqlite3, sys
-import gofish, go_db
+import gofish2, go_db
 
 
 def main():
@@ -88,11 +88,13 @@ def main():
     print("Adding to database")
 
     files_added = 0
+    fail_list = []
 
     for full_path in files_to_add_list:
         try:
-            sgfroot = gofish.load_sgf_mainline(full_path)
+            sgfroot = gofish2.load(full_path)[0]
         except:
+            fail_list.append(full_path)
             continue
 
         new_record = go_db.record_from_sgf(sgfroot, full_path)
@@ -125,6 +127,19 @@ def main():
         files_removed += 1
 
     print("{} files removed from database".format(files_removed))
+
+    # Note any files we failed to add...
+
+    if len(fail_list) > 0:
+        fail_list.sort()
+        print("The following files could not be added, due to errors")
+        for full_path in fail_list:
+            try:
+                s = "  {}".format(os.path.basename(full_path))
+                print(s)
+            except:
+                print("  <unprintable>")
+
 
     # ---------------------------------------------------------------------------------
 
