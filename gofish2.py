@@ -18,34 +18,50 @@ class Node:
 			parent.children.append(self)
 
 	@property
-	def width(self):		# FIXME
+	def width(self):
 
 		if self.__board:
 			return self.__board.width
 
-		root = self.get_root_node()
+		root = self.get_root()
 		sz = root.get_value("SZ")
 
+		if sz == None:
+			return 19
+
+		if ":" in sz:
+			width_string = sz.split(":")[0]
+		else:
+			width_string = sz
+
 		try:
-			return int(sz)
+			return int(width_string)
 		except:
 			return 19
 
 	@property
-	def height(self):		# FIXME
+	def height(self):
 
 		if self.__board:
 			return self.__board.height
 
-		root = self.get_root_node()
+		root = self.get_root()
 		sz = root.get_value("SZ")
 
+		if sz == None:
+			return 19
+
+		if ":" in sz:
+			height_string = sz.split(":")[1]
+		else:
+			height_string = sz
+
 		try:
-			return int(sz)
+			return int(height_string)
 		except:
 			return 19
 
-	def get_root_node(self):
+	def get_root(self):
 
 		node = self
 		while True:
@@ -116,7 +132,7 @@ class Node:
 
 	def dyer(self):
 
-		node = self.get_root_node()
+		node = self.get_root()
 		dyer = {20: "??", 40: "??", 60: "??", 31: "??", 51: "??", 71: "??"}
 
 		move_count = 0;
@@ -153,6 +169,27 @@ class Node:
 				return (x, y)
 		return None
 
+	def subtree_size(self):			# Including self
+
+		node = self
+		n = 0
+
+		while True:
+
+			n += 1
+
+			if len(node.children) == 0:
+				return n
+			elif len(node.children) == 1:
+				node = node.children[0]
+			else:
+				for child in node.children:
+					n += child.subtree_size()
+				return n
+
+	def tree_size(self):
+		return self.get_root().subtree_size()
+
 
 class ParseResult:
 
@@ -175,10 +212,17 @@ def load_sgf(buf):
 
 	# Always returns at least 1 game; or throws if it cannot.
 
+	if type(buf) is str:
+		buf = bytearray(buf.encode(encoding="utf-8", errors="replace"))
+
 	ret = []
 	off = 0
 
 	while True:
+
+		if len(buf) - off < 3:
+			break
+
 		try:
 			o = load_sgf_recursive(buf, off, None)
 			ret.append(o.root)
@@ -214,9 +258,9 @@ def load_sgf_recursive(buf, off, parent_of_local_root):
 		c = buf[i]
 
 		if not tree_started:
-			if c <= ord(" "):
+			if c <= 32:
 				continue
-			elif c == ord("("):
+			elif c == 40:								# (
 				tree_started = True
 				continue
 			else:
@@ -228,10 +272,10 @@ def load_sgf_recursive(buf, off, parent_of_local_root):
 				value.append(buf[i])
 				escape_flag = False
 				continue
-			elif c == ord("\\"):
+			elif c == 92:								# \
 				escape_flag = True
 				continue
-			elif c == ord("]"):
+			elif c == 93:								# ]
 				inside_value = False
 				if not node:
 					raise ParserFail
@@ -243,9 +287,9 @@ def load_sgf_recursive(buf, off, parent_of_local_root):
 
 		else:
 
-			if c <= ord(" ") or (c >= ord("a") and c <= ord("z")):
+			if c <= 32 or (c >= 97 and c <= 122):		# a-z
 				continue
-			elif c == ord("["):
+			elif c == 91:								# [
 				if not node:
 					node = Node(parent_of_local_root)
 					root = node
@@ -257,17 +301,17 @@ def load_sgf_recursive(buf, off, parent_of_local_root):
 				if (key == b'B' or key == b'W') and ("B" in node.props or "W" in node.props):
 					raise ParserFail
 				continue
-			elif c == ord("("):
+			elif c == 40:								# (
 				if not node:
 					raise ParserFail
 				chars_to_skip = load_sgf_recursive(buf, i, node).readcount
 				i += chars_to_skip - 1	# Subtract 1: the ( character we have read is also counted by the recurse.
 				continue
-			elif c == ord(")"):
+			elif c == 41:								# )
 				if not root:
 					raise ParserFail
 				return ParseResult(root = root, readcount = i + 1 - off)
-			elif c == ord(";"):
+			elif c == 59:								# ;
 				if not node:
 					node = Node(parent_of_local_root)
 					root = node
@@ -276,7 +320,7 @@ def load_sgf_recursive(buf, off, parent_of_local_root):
 				key = bytearray()
 				keycomplete = False
 				continue
-			elif c >= ord("A") and c <= ord("Z"):
+			elif c >= 65 and c <= 90:					# A-Z
 				if keycomplete:
 					key = bytearray()
 					keycomplete = False
