@@ -140,6 +140,7 @@ class Node:
 		return dyer_string
 
 	def move_coords(self):          # A pass causes None to be returned.
+
 		for key in ["B", "W"]:
 			if key in self.props:
 				movestring = self.props[key][0]
@@ -234,7 +235,7 @@ def load_sgf_recursive(buf, off, parent_of_local_root):
 				inside_value = False
 				if not node:
 					raise ParserFail
-				node.add_value_fast(key.decode(), value.decode())
+				node.add_value_fast(key.decode(encoding="utf-8", errors="replace"), value.decode(encoding="utf-8", errors="replace"))
 				continue
 			else:
 				value.append(c)
