@@ -112,12 +112,14 @@ def main():
     # Remove any missing files...
 
     files_to_del_from_db = db_known_files - dir_known_files
+    files_to_del_list = list(files_to_del_from_db)
+    files_to_del_list.sort()
 
     files_removed = 0
 
     print("Removing from database")
 
-    for full_path in files_to_del_from_db:
+    for full_path in files_to_del_list:
         go_db.delete_game_from_db(full_path, c)
         try:
             s = "  {}".format(os.path.basename(full_path))
