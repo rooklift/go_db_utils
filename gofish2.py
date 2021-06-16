@@ -1,9 +1,241 @@
 #!/usr/bin/env python3
 
-
 class ParserFail(Exception):
 	pass
 
+class ParseResult:
+	def __init__(self, root, readcount):
+		self.root = root
+		self.readcount = readcount
+
+# -------------------------------------------------------------------------------------------------
+
+class Board:
+
+	def __init__(self, width, height, state = None, ko = None, active = "b", caps_by_b = 0, caps_by_w = 0):
+
+		self.width = width
+		self.height = height
+		self.state = []
+		self.ko = ko
+		self.active = active
+		self.caps_by_b = caps_by_b
+		self.caps_by_w = caps_by_w
+
+		for x in range(width):
+			self.state.append([])
+			for y in range(height):
+				if state:
+					self.state[x].append(state[x][y])
+				else:
+					self.state[x].append("")
+
+
+	def copy(self):
+		return Board(self.width, self.height, self.state, self.ko, self.active, self.caps_by_b, self.caps_by_w)
+
+
+	def dump(self):
+
+		ko_x, ko_y = s_to_xy(self.ko)
+
+		for y in range(0, self.height):
+			for x in range(0, self.width):
+				char = "X" if self.state[x][y] == "b" else "O" if self.state[x][y] == "w" else " " if (ko_x == x and ko_y == y) else "."
+				print(char, end = " ")
+			print()
+
+		print("Captures: {} by Black - {} by White".format(self.caps_by_b, self.caps_by_w))
+		print("Next to play: {}".format("Black" if self.active == "b" else "White"))
+
+
+	def state_at(self, s):
+		x, y = s_to_xy(s)
+		if x >= 0 and x < self.width and y >= 0 and y < self.height:
+			return self.state[x][y]
+		else:
+			return ""
+
+
+	def set_at(self, s, colour):
+		assert(colour == "b" or colour == "w" or colour == "")
+		x, y = s_to_xy(s)
+		if x >= 0 and x < self.width and y >= 0 and y < self.height:
+			self.state[x][y] = colour
+
+
+	def neighbours(self, s):
+		x, y = s_to_xy(s)
+		if x < 0 or x >= self.width or y < 0 or y >= self.height:
+			return []
+		ret = []
+		if x < self.width - 1:
+			ret.append(xy_to_s(x + 1, y))
+		if x > 0:
+			ret.append(xy_to_s(x - 1, y))
+		if y < self.height - 1:
+			ret.append(xy_to_s(x, y + 1))
+		if y > 0:
+			ret.append(xy_to_s(x, y - 1))
+		return ret
+
+
+	def destroy_group(self, s):
+
+		colour = self.state_at(s)
+		if not colour:
+			return 0
+
+		self.set_at(s, "")
+
+		if colour == "b":
+			self.caps_by_w += 1
+		else:
+			self.caps_by_b += 1
+
+		caps = 1;
+
+		for neighbour in self.neighbours(s):
+			if self.state_at(neighbour) == colour:
+				caps += self.destroy_group(neighbour)
+
+		return caps
+
+
+	def has_liberties(self, s):
+
+		if not self.state_at(s):
+			return False
+
+		touched = dict()
+
+		return self._has_liberties_recurse(s, touched)
+
+
+	def _has_liberties_recurse(self, s, touched):
+
+		touched[s] = True
+
+		colour = self.state_at(s)
+
+		for neighbour in self.neighbours(s):
+
+			if neighbour in touched:
+				continue
+
+			neighbour_colour = self.state_at(neighbour)
+
+			if not neighbour_colour:
+				return True
+
+			if neighbour_colour == colour:
+				if self._has_liberties_recurse(neighbour, touched):
+					return True
+
+		return False
+
+
+	def legal_move(self, s):
+		return self.legal_move_colour(s, self.active)
+
+
+	def legal_move_colour(self, s, colour):		# Note: does not consider passes as "legal moves".
+
+		assert(colour == "b" or colour == "w")
+
+		x, y = s_to_xy(s)
+
+		if x < 0 or x >= self.width or y < 0 or y >= self.height:
+			return False
+		if self.state_at(s):
+			return False
+		if self.ko == s:
+			return False
+
+		# Move will be legal as long as it's not suicide...
+
+		neighbours = self.neighbours(s)
+
+		for neighbour in neighbours:
+			if not self.state_at(neighbour):
+				return True						# New stone has a liberty.
+
+		opposite_colour = "b" if colour == "w" else "w"
+
+		for neighbour in neighbours:
+			if self.state_at(neighbour) == colour:
+				touched = dict()
+				touched[s] = True
+				if self.has_liberties_recurse(neighbour, touched):
+					return True					# One of the groups we're joining has a liberty other than s.
+			elif self.state_at(neighbour) == opposite_colour:
+				touched = dict()
+				touched[s] = True
+				if not self.has_liberties_recurse(neighbour, touched):
+					return True					# One of the enemy groups has no liberties other than s.
+
+		return False
+
+
+	def play_move_or_pass(self, s, colour):
+
+		assert(colour == "b" or colour == "w")
+
+		self.ko = None
+		self.active = "b" if colour == "w" else "w"
+
+		x, y = s_to_xy(s)
+
+		if x < 0 or x >= self.width or y < 0 or y >= self.height:
+			return					# Treat as a pass.
+
+		self.set_at(s, colour)
+		caps = 0
+
+		for neighbour in self.neighbours(s):
+
+			neighbour_colour = self.state_at(neighbour)
+
+			if neighbour_colour and neighbour_colour != colour:
+				if not self.has_liberties(neighbour):
+					caps += self.destroy_group(neighbour)
+
+		if not self.has_liberties(s):
+			self.destroy_group(s)
+
+		if caps == 1:
+			if self._one_liberty_singleton(s):
+				self.ko = self._ko_square_finder(s)
+
+
+	def _one_liberty_singleton(self, s):
+
+		colour = self.state_at(s)
+
+		if not colour:
+			return False
+
+		liberties = 0
+
+		for neighbour in self.neighbours(s):
+			neighbour_colour = self.state_at(neighbour)
+			if neighbour_colour == colour:
+				return False
+			if not neighbour_colour:
+				liberties += 1
+
+		return liberties == 1
+
+
+	def _ko_square_finder(self, s):
+
+		for neighbour in self.neighbours(s):
+			if not self.state_at(neighbour):
+				return neighbour
+
+		return None
+
+# -------------------------------------------------------------------------------------------------
 
 class Node:
 
@@ -12,19 +244,16 @@ class Node:
 		self.parent = parent
 		self.children = []
 		self.props = dict()
-		self.__board = None
 
 		if parent:
 			parent.children.append(self)
 
+
 	@property
 	def width(self):
 
-		if self.__board:
-			return self.__board.width
-
 		root = self.get_root()
-		sz = root.get_value("SZ")
+		sz = root.get("SZ")
 
 		if sz == None:
 			return 19
@@ -35,18 +264,16 @@ class Node:
 			width_string = sz
 
 		try:
-			return int(width_string)
+			return min(int(width_string), 52)
 		except:
 			return 19
+
 
 	@property
 	def height(self):
 
-		if self.__board:
-			return self.__board.height
-
 		root = self.get_root()
-		sz = root.get_value("SZ")
+		sz = root.get("SZ")
 
 		if sz == None:
 			return 19
@@ -57,27 +284,87 @@ class Node:
 			height_string = sz
 
 		try:
-			return int(height_string)
+			return min(height_string, 52)
 		except:
 			return 19
+
+
+	def apply(self, board):
+
+		for s in self.all_values("AE"):
+			board.set_at(s, "")
+
+		for s in self.all_values("AB"):
+			board.set_at(s, "b")
+			board.active = "w"
+
+		for s in self.all_values("AW"):
+			board.set_at(s, "w")
+			board.active = "b"
+
+		for s in self.all_values("B"):
+			board.play_move_or_pass(s, "b")		# Will treat s as a pass if it's not a valid move.
+
+		for s in self.all_values("W"):
+			board.play_move_or_pass(s, "w")		# Will treat s as a pass if it's not a valid move.
+
+		pl = self.get("PL");
+		if pl == "B" or pl == "b":
+			board.active = "b"
+		if pl == "W" or pl == "w":
+			board.active = "w"
+
+
+	def make_board(self):
+
+		history = self.history()
+
+		board = Board(history[0].width, history[0].height)
+
+		for node in history:
+			node.apply(board)
+
+		return board
+
 
 	def get_root(self):
 
 		node = self
-		while True:
-			if not node.parent:
-				return node
+		while node.parent:
+			node = node.parent
+		return node
+
+
+	def get_end(self):
+
+		node = self
+		while len(node.children) > 0:
+			node = node.children[0]
+		return node
+
+
+	def history(self):
+
+		node = self
+		ret = []
+
+		while node:
+			ret.append(node)
 			node = node.parent
 
-	def set_value(self, key, value):
+		ret.reverse()
+		return ret
+
+
+	def set(self, key, value):
 
 		key = str(key)
 		value = str(value)
-		self.mutor_check(key)
 
 		self.props[key] = [value]
 
-	def get_value(self, key):
+
+	def get(self, key):
 
 		key = str(key)
 
@@ -85,15 +372,28 @@ class Node:
 			return None
 		return self.props[key][0]
 
+
+	def all_values(self, key):
+
+		key = str(key)
+
+		ret = [];
+		if key not in self.props:
+			return ret
+		for value in self.props[key]:
+			ret.append(value)
+		return ret;
+
+
 	def add_value(self, key, value):
 
 		key = str(key)
 		value = str(value)
-		self.mutor_check(key)
 
 		if key not in self.props:
 			self.props[key] = []
 		self.props[key].append(value)
+
 
 	def add_value_fast(self, key, value):
 
@@ -101,73 +401,75 @@ class Node:
 			self.props[key] = []
 		self.props[key].append(value)
 
+
 	def delete_key(self, key):
 
 		key = str(key)
-		self.mutor_check(key)
-
 		self.props.pop(key, None)
 
-	def mutor_check(self, key):		# These are board-altering keys and so we must clear any board caches recursively
-
-		if key in ["B", "W", "AB", "AW", "AE", "PL", "SZ"]:
-			self.clear_board_recursive()
-
-	def clear_board_recursive(self):
-
-		node = self
-
-		while True:
-
-			node.__board = None
-
-			if len(node.children) == 0:
-				break
-			elif len(node.children) == 1:
-				node = node.children[0]
-			else:
-				for child in node.children:
-					child.clear_board_recursive()
-				break
 
 	def dyer(self):
 
-		node = self.get_root()
+		root = self.get_root()
+		node = root
 		dyer = {20: "??", 40: "??", 60: "??", 31: "??", 51: "??", 71: "??"}
-
 		move_count = 0;
 
 		while True:
 
-			if "B" in node.props or "W" in node.props:
+			s = None
+			if "B" in node.props:
+				s = node.props["B"][0]
+			elif "W" in node.props:
+				s = node.props["W"][0]
 
+			if s != None:
 				move_count += 1
 				if move_count in [20, 40, 60, 31, 51, 71]:
-					mv = node.move_coords()
-					if mv:
-						dyer[move_count] = chr(mv[0] + 97) + chr(mv[1] + 97)
+					p = root.validated_move_string(s)
+					if p:
+						dyer[move_count] = p
 
-			if (len(node.children) == 0 or move_count >= 71):
+			if len(node.children) == 0 or move_count >= 71:
 				break
 
 			node = node.children[0]
 
-		dyer_string = dyer[20] + dyer[40] + dyer[60] + dyer[31] + dyer[51] + dyer[71]
-		return dyer_string
+		return dyer[20] + dyer[40] + dyer[60] + dyer[31] + dyer[51] + dyer[71]
 
-	def move_coords(self):          # A pass causes None to be returned.
 
-		for key in ["B", "W"]:
-			if key in self.props:
-				movestring = self.props[key][0]
-				if len(movestring) != 2:
-					return None
-				x = ord(movestring[0]) - 97
-				y = ord(movestring[1]) - 97
-				if x < 0 or x >= self.width or y < 0 or y >= self.height:
-					return None
-				return (x, y)
-		return None
+	def validated_move_string(self, s):
+
+		# Returns s if s is an on-board SGF string, otherwise returns ""
+
+		if not isinstance(s, str):
+			return ""
+
+		if len(s) != 2:
+			return ""
+
+		x_ascii = ord(s[0])
+		y_ascii = ord(s[1])
+
+		if x_ascii >= 97 and x_ascii <= 122:
+			x = x_ascii - 97
+		elif x_ascii >= 65 and x_ascii <= 90:
+			x = x_ascii - 65 + 26
+		else:
+			return ""
+
+		if y_ascii >= 97 and y_ascii <= 122:
+			y = y_ascii - 97
+		elif y_ascii >= 65 and y_ascii <= 90:
+			y = y_ascii - 65 + 26
+		else:
+			return ""
+
+		if x >= 0 and x < self.width and y >= 0 and y < self.height:
+			return s
+		else:
+			return ""
+
 
 	def subtree_size(self):			# Including self
 
@@ -187,15 +489,92 @@ class Node:
 					n += child.subtree_size()
 				return n
 
+
 	def tree_size(self):
 		return self.get_root().subtree_size()
 
+# -------------------------------------------------------------------------------------------------
 
-class ParseResult:
+def s_to_xy(s):
 
-	def __init__(self, root, readcount):
-		self.root = root
-		self.readcount = readcount
+	if not isinstance(s, str):
+		return (-1, -1)
+
+	if len(s) != 2:
+		return (-1, -1)
+
+	x_ascii = ord(s[0])
+	y_ascii = ord(s[1])
+
+	if x_ascii >= 97 and x_ascii <= 122:
+		x = x_ascii - 97
+	elif x_ascii >= 65 and x_ascii <= 90:
+		x = x_ascii - 65 + 26
+	else:
+		return (-1, -1)
+
+	if y_ascii >= 97 and y_ascii <= 122:
+		y = y_ascii - 97
+	elif y_ascii >= 65 and y_ascii <= 90:
+		y = y_ascii - 65 + 26
+	else:
+		return (-1, -1)
+
+	return (x, y)
+
+
+def xy_to_s(x, y):
+
+	if x < 0 or x >= 52 or y < 0 or y >= 52:
+		return ""
+
+	s = ""
+
+	if x < 26:
+		s += chr(x + 97)
+	else:
+		s += chr(x + 65 - 26)
+
+	if y < 26:
+		s += chr(y + 97)
+	else:
+		s += chr(y + 65 - 26)
+
+	return s
+
+
+def safe_string(s):     				# "safe" meaning safely escaped \ and ] characters
+	s = s.replace("\\", "\\\\")
+	s = s.replace("]", "\\]")
+	return s
+
+# -------------------------------------------------------------------------------------------------
+
+def save(filename, node):
+	root = node.get_root()
+	with open(filename, "w", encoding="utf-8") as outfile:
+		_write_tree(outfile, root)
+
+
+def _write_tree(outfile, node):
+	outfile.write("(")
+	while True:
+		outfile.write(";")
+		for key in node.props:
+			outfile.write(key)
+			for value in node.props[key]:
+				outfile.write("[{}]".format(safe_string(value)))
+		if len(node.children) > 1:
+			for child in node.children:
+				_write_tree(outfile, child)
+			break
+		elif len(node.children) == 1:
+			node = node.children[0]
+			continue
+		else:
+			break
+	outfile.write(")")
+	return
 
 
 def load(filename):
@@ -218,28 +597,24 @@ def load_sgf(buf):
 	ret = []
 	off = 0
 
-	while True:
-
-		if len(buf) - off < 3:
-			break
-
+	while len(buf) - off >= 3:
 		try:
-			o = load_sgf_recursive(buf, off, None)
+			o = _load_sgf_recursive(buf, off, None)
 			ret.append(o.root)
 			off += o.readcount
 		except:
 			if len(ret) > 0:
 				break
 			else:
-				raise ParserFail
+				raise
 
 	if len(ret) == 0:
-		raise ParserFail
+		raise ParserFail("Found no game")
 
 	return ret
 
 
-def load_sgf_recursive(buf, off, parent_of_local_root):
+def _load_sgf_recursive(buf, off, parent_of_local_root):
 
 	root = None
 	node = None
@@ -264,7 +639,7 @@ def load_sgf_recursive(buf, off, parent_of_local_root):
 				tree_started = True
 				continue
 			else:
-				raise ParserFail
+				raise ParserFail("Unexpected byte before (")
 
 		if inside_value:
 
@@ -278,7 +653,7 @@ def load_sgf_recursive(buf, off, parent_of_local_root):
 			elif c == 93:								# ]
 				inside_value = False
 				if not node:
-					raise ParserFail
+					raise ParserFail("Value ended by ] but node was None")
 				node.add_value_fast(key.decode(encoding="utf-8", errors="replace"), value.decode(encoding="utf-8", errors="replace"))
 				continue
 			else:
@@ -297,19 +672,19 @@ def load_sgf_recursive(buf, off, parent_of_local_root):
 				inside_value = True
 				keycomplete = True
 				if len(key) == 0:
-					raise ParserFail
+					raise ParserFail("Value started by [ but key was empty")
 				if (key == b'B' or key == b'W') and ("B" in node.props or "W" in node.props):
-					raise ParserFail
+					raise ParserFail("Multiple moves in node")
 				continue
 			elif c == 40:								# (
 				if not node:
-					raise ParserFail
-				chars_to_skip = load_sgf_recursive(buf, i, node).readcount
+					raise ParserFail("New subtree started but node was None")
+				chars_to_skip = _load_sgf_recursive(buf, i, node).readcount
 				i += chars_to_skip - 1	# Subtract 1: the ( character we have read is also counted by the recurse.
 				continue
 			elif c == 41:								# )
 				if not root:
-					raise ParserFail
+					raise ParserFail("Subtree ended but local root was None")
 				return ParseResult(root = root, readcount = i + 1 - off)
 			elif c == 59:								# ;
 				if not node:
@@ -327,8 +702,8 @@ def load_sgf_recursive(buf, off, parent_of_local_root):
 				key.append(c)
 				continue
 			else:
-				raise ParserFail
+				raise ParserFail("Unacceptable byte while expecting key")
 
-	raise ParserFail
+	raise ParserFail("Reached end of input")
 
 
