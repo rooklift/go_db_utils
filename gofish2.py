@@ -3,6 +3,9 @@
 class ParserFail(Exception):
 	pass
 
+class IllegalMove(Exception):
+	pass
+
 class ParseResult:
 	def __init__(self, root, readcount):
 		self.root = root
@@ -93,7 +96,7 @@ class Board:
 		else:
 			self.caps_by_b += 1
 
-		caps = 1;
+		caps = 1
 
 		for neighbour in self.neighbours(s):
 			if self.state_at(neighbour) == colour:
@@ -244,6 +247,7 @@ class Node:
 		self.parent = parent
 		self.children = []
 		self.props = dict()
+		self._board = None
 
 		if parent:
 			parent.children.append(self)
@@ -251,6 +255,9 @@ class Node:
 
 	@property
 	def width(self):
+
+		if self._board:
+			return self._board.width
 
 		root = self.get_root()
 		sz = root.get("SZ")
@@ -272,6 +279,9 @@ class Node:
 	@property
 	def height(self):
 
+		if self._board:
+			return self._board.height
+
 		root = self.get_root()
 		sz = root.get("SZ")
 
@@ -284,7 +294,7 @@ class Node:
 			height_string = sz
 
 		try:
-			return min(height_string, 52)
+			return min(int(height_string), 52)
 		except:
 			return 19
 
@@ -308,23 +318,48 @@ class Node:
 		for s in self.all_values("W"):
 			board.play_move_or_pass(s, "w")		# Will treat s as a pass if it's not a valid move.
 
-		pl = self.get("PL");
+		pl = self.get("PL")
 		if pl == "B" or pl == "b":
 			board.active = "b"
 		if pl == "W" or pl == "w":
 			board.active = "w"
 
 
-	def make_board(self):
+	def _cache_board(self):
 
-		history = self.history()
+		# As it stands, this only causes the board to exist in this node, and has no
+		# other side effects (i.e. boards in ancestor nodes are not caused to exist).
 
-		board = Board(history[0].width, history[0].height)
+		if self._board:
+			return
 
-		for node in history:
+		node = self
+		history = []
+
+		while node:
+			history.append(node)
+			if node._board:
+				break
+			node = node.parent
+
+		history.reverse()
+
+		if history[0]._board:
+			board = history[0]._board.copy()
+		else:
+			board = Board(history[0].width, history[0].height)		# In this case history[0] is the root.
+			history[0].apply(board)
+
+		for node in history[1:]:
 			node.apply(board)
 
-		return board
+		self._board = board
+
+
+	def make_board(self):
+
+		self._cache_board()
+		return self._board.copy()
 
 
 	def get_root(self):
@@ -360,6 +395,7 @@ class Node:
 
 		key = str(key)
 		value = str(value)
+		self._mutor_check(key)
 
 		self.props[key] = [value]
 
@@ -377,18 +413,19 @@ class Node:
 
 		key = str(key)
 
-		ret = [];
+		ret = []
 		if key not in self.props:
 			return ret
 		for value in self.props[key]:
 			ret.append(value)
-		return ret;
+		return ret
 
 
 	def add_value(self, key, value):
 
 		key = str(key)
 		value = str(value)
+		self._mutor_check(key)
 
 		if key not in self.props:
 			self.props[key] = []
@@ -405,6 +442,8 @@ class Node:
 	def delete_key(self, key):
 
 		key = str(key)
+		self._mutor_check(key)
+
 		self.props.pop(key, None)
 
 
@@ -413,7 +452,7 @@ class Node:
 		root = self.get_root()
 		node = root
 		dyer = {20: "??", 40: "??", 60: "??", 31: "??", 51: "??", 71: "??"}
-		move_count = 0;
+		move_count = 0
 
 		while True:
 
@@ -493,6 +532,66 @@ class Node:
 	def tree_size(self):
 		return self.get_root().subtree_size()
 
+
+	def make_move(self, s):			# This method cannot be used for passing
+
+		self._cache_board()
+
+		if not self._board.legal_move(s):
+			raise IllegalMove
+
+		colourkey = self._board.active.upper()
+
+		for node in self.children:
+			if node.get(colourkey) == s:
+				return node
+
+		node = Node(self)
+		node.set(colourkey, s)
+
+		return node
+
+
+	def make_pass(self):
+
+		self._cache_board()
+		colourkey = self._board.active.upper()
+
+		for node in self.children:
+			foo = node.get(colourkey);
+			if foo != None:
+				if self.validated_move_string(foo) == "":
+					return node
+
+		node = Node(self)
+		node.set(colourkey, "")
+
+		return node
+
+
+	def _mutor_check(self, key):	# If we had board caches, these properties would require a recursive cache clear
+
+		if key in ["B", "W", "AB", "AW", "AE", "PL", "SZ"]:
+			self._clear_board_recursive()
+
+
+	def _clear_board_recursive(self):
+
+		node = self
+
+		while True:
+
+			node._board = None
+
+			if len(node.children) == 0:
+				break
+			elif len(node.children) == 1:
+				node = node.children[0]
+			else:
+				for child in node.children:
+					child._clear_board_recursive()
+				break
+
 # -------------------------------------------------------------------------------------------------
 
 def s_to_xy(s):
@@ -548,6 +647,41 @@ def safe_string(s):     				# "safe" meaning safely escaped \ and ] characters
 	s = s.replace("]", "\\]")
 	return s
 
+
+def handicap_stones(count, width, height, tygem = False):
+
+	# From the Sabaki project by Yichuan Shen, with modifications.
+	# https://github.com/SabakiHQ/go-board
+
+	if min(width, height) <= 6 or count < 2:
+		return []
+
+	nearx = 3 if width >= 13 else 2
+	neary = 3 if height >= 13 else 2
+	farx = width - nearx - 1
+	fary = height - neary - 1
+	middlex = (width - 1) // 2
+	middley = (height - 1) // 2
+
+	if tygem:
+		stones = [[nearx, fary], [farx, neary], [nearx, neary], [farx, fary]]
+	else:
+		stones = [[nearx, fary], [farx, neary], [farx, fary], [nearx, neary]]
+
+	if width % 2 != 0 and height % 2 != 0 and (width >= 9 or height >= 9):
+
+		if count == 5 or count == 7 or count >= 9:
+			stones.append([middlex, middley])
+
+		stones += [
+			[nearx, middley],
+			[farx, middley],
+			[middlex, neary],
+			[middlex, fary]
+		]
+
+	return [xy_to_s(z[0], z[1]) for z in stones[0:count]]
+
 # -------------------------------------------------------------------------------------------------
 
 def save(filename, node):
@@ -579,12 +713,18 @@ def _write_tree(outfile, node):
 
 def load(filename):
 
-	# Returns an array of roots (except load_sgf() will throw if it cannot get at least 1 root).
+	# This can throw.
+	# Otherwise, returns a non-empty array of roots.
 
 	with open(filename, "rb") as infile:
 		buf = infile.read()
 
-	return load_sgf(buf)
+	if filename.lower().endswith(".gib"):
+		return load_gib(buf)
+	elif filename.lower().endswith(".ngf"):
+		return load_ngf(buf)
+	else:
+		return load_sgf(buf)
 
 
 def load_sgf(buf):
@@ -609,7 +749,7 @@ def load_sgf(buf):
 				raise
 
 	if len(ret) == 0:
-		raise ParserFail("Found no game")
+		raise ParserFail("SGF load error: Found no game")
 
 	return ret
 
@@ -639,7 +779,7 @@ def _load_sgf_recursive(buf, off, parent_of_local_root):
 				tree_started = True
 				continue
 			else:
-				raise ParserFail("Unexpected byte before (")
+				raise ParserFail("SGF load error: Unexpected byte before (")
 
 		if inside_value:
 
@@ -653,7 +793,7 @@ def _load_sgf_recursive(buf, off, parent_of_local_root):
 			elif c == 93:								# ]
 				inside_value = False
 				if not node:
-					raise ParserFail("Value ended by ] but node was None")
+					raise ParserFail("SGF load error: Value ended by ] but node was None")
 				node.add_value_fast(key.decode(encoding="utf-8", errors="replace"), value.decode(encoding="utf-8", errors="replace"))
 				continue
 			else:
@@ -672,19 +812,19 @@ def _load_sgf_recursive(buf, off, parent_of_local_root):
 				inside_value = True
 				keycomplete = True
 				if len(key) == 0:
-					raise ParserFail("Value started by [ but key was empty")
+					raise ParserFail("SGF load error: Value started by [ but key was empty")
 				if (key == b'B' or key == b'W') and ("B" in node.props or "W" in node.props):
 					raise ParserFail("Multiple moves in node")
 				continue
 			elif c == 40:								# (
 				if not node:
-					raise ParserFail("New subtree started but node was None")
+					raise ParserFail("SGF load error: New subtree started but node was None")
 				chars_to_skip = _load_sgf_recursive(buf, i, node).readcount
 				i += chars_to_skip - 1	# Subtract 1: the ( character we have read is also counted by the recurse.
 				continue
 			elif c == 41:								# )
 				if not root:
-					raise ParserFail("Subtree ended but local root was None")
+					raise ParserFail("SGF load error: Subtree ended but local root was None")
 				return ParseResult(root = root, readcount = i + 1 - off)
 			elif c == 59:								# ;
 				if not node:
@@ -702,8 +842,278 @@ def _load_sgf_recursive(buf, off, parent_of_local_root):
 				key.append(c)
 				continue
 			else:
-				raise ParserFail("Unacceptable byte while expecting key")
+				raise ParserFail("SGF load error: Unacceptable byte while expecting key")
 
-	raise ParserFail("Reached end of input")
+	raise ParserFail("SGF load error: Reached end of input")
 
 
+def load_ngf(buf):
+
+	lines = [z.decode(encoding="utf-8", errors="replace").strip() for z in buf.split(b"\n")]
+
+	if len(lines) < 12:
+		raise ParserFail("NGF load error: File too short")
+
+	# ---------------------------------------------------------------------------------------------
+
+	try:
+		boardsize = int(lines[1])
+	except:
+		boardsize = 19
+
+	# ---------------------------------------------------------------------------------------------
+
+	pw = ""
+	pb = ""
+
+	pw_fields = lines[2].split()
+	pb_fields = lines[3].split()
+
+	if len(pw_fields) > 0:
+		if "�" not in pw_fields[0]:
+			pw = pw_fields[0]
+
+	if len(pb_fields) > 0:
+		if "�" not in pb_fields[0]:
+			pb = pb_fields[0]
+
+	# ---------------------------------------------------------------------------------------------
+
+	try:
+		handicap = int(lines[5])
+	except:
+		handicap = 0
+
+	if handicap < 0 or handicap > 9:
+		raise ParserFail("NGF load error: Bad handicap")
+
+	# ---------------------------------------------------------------------------------------------
+
+	try:
+		komi = float(lines[7])
+		if komi == int(komi):
+			komi += 0.5
+	except:
+		komi = 0
+
+	# ---------------------------------------------------------------------------------------------
+
+	rawdate = ""
+
+	if len(lines[8]) >= 8:
+		rawdate = lines[8][0:8]
+
+	# ---------------------------------------------------------------------------------------------
+
+	re = ""
+	margin = ""
+
+	result_lower = lines[10].lower()
+
+	if "black win" in result_lower or "white los" in result_lower:
+		re = "B+"
+	if "white win" in result_lower or "black los" in result_lower:
+		re = "W+"
+	if "resign" in result_lower:
+		margin = "R"
+	if "time" in result_lower:
+		margin = "T"
+
+	if re != "":
+		re += margin
+
+	# ---------------------------------------------------------------------------------------------
+
+	root = Node()
+	node = root
+
+	root.set("SZ", boardsize)
+	root.set("RU", "Korean")
+	root.set("KM", komi)
+
+	if handicap > 1:
+		root.set("HA", handicap)
+		for s in handicap_stones(handicap, boardsize, boardsize, True):
+			root.add_value("AB", s)
+
+	if len(rawdate) == 8:
+		ok = True
+		for n in range(8):
+			if rawdate[n] < "0" or rawdate[n] > "9":
+				ok = False
+		if ok:
+			root.set("DT", rawdate[0:4] + "-" + rawdate[4:6] + "-" + rawdate[6:8])
+
+	if pw:
+		root.set("PW", pw)
+	if pb:
+		root.set("PB", pb)
+	if re:
+		root.set("RE", re)
+
+	for line in lines:
+
+		line = line.upper()
+
+		if len(line) < 7:
+			continue
+
+		if line[0:2] == "PM":
+
+			if line[4] == "B" or line[4] == "W":
+
+				key = line[4]
+
+				x = ord(line[5]) - 66
+				y = ord(line[6]) - 66
+
+				node = Node(node)
+
+				if x >= 0 and x < boardsize and y >= 0 and y < boardsize:
+					node.set(key, xy_to_s(x, y))
+				else:
+					node.set(key, "")		# Pass
+
+	if len(root.children) == 0:
+		raise ParserFail("NGF load error: Got no moves")
+
+	return [root]
+
+
+def load_gib(buf):
+
+	lines = [z.decode(encoding="utf-8", errors="replace").strip() for z in buf.split(b"\n")]
+
+	root = Node()
+	node = root
+
+	root.set("SZ", 19)								# Is this always so?
+	root.set("RU", "Korean")
+	root.set("KM", 0)								# Can get adjusted in a moment.
+
+	for line in lines:
+
+		# Game info...
+
+		if line.startswith("\\[GAMETAG="):
+
+			dt, re, km, pb, pw = parse_gib_gametag(line)
+
+			if dt:
+				root.set("DT", dt)
+			if re:
+				root.set("RE", re)
+			if km:
+				root.set("KM", km)
+
+			if pb and "�" not in pb:
+				root.set("PB", pb)
+			if pw and "�" not in pw:
+				root.set("PW", pw)
+
+		# Split the line into tokens for the handicap and move parsing...
+
+		fields = line.split()
+
+		# Handicap...
+
+		if len(fields) >= 4 and fields[0] == "INI":
+
+			if node != root:
+				raise ParserFail("GIB load error: Got INI after moves were made")
+
+			try:
+				handicap = int(fields[3])
+				if handicap > 1:
+					root.set("HA", handicap)
+					for s in handicap_stones(handicap, 19, 19, True):
+						root.add_value("AB", s)
+			except:
+				pass
+
+		# Moves...
+
+		if len(fields) >= 6 and fields[0] == "STO":
+
+			try:
+				x = int(fields[4])
+				y = int(fields[5])
+				key = "W" if fields[3] == "2" else "B"
+				node = Node(node)
+				node.set(key, xy_to_s(x, y))
+			except:
+				pass
+
+	if len(root.children) == 0:
+		raise ParserFail("GIB load error: got no moves")
+
+	return [root]
+
+
+def parse_gib_gametag(line):
+
+	fields = [z.strip() for z in line.split(",")]
+
+	dt = ""
+	re = ""
+	km = ""
+	pb = ""
+	pw = ""
+
+	zipsu = 0
+
+	for s in fields:
+
+		if len(s) < 2:
+			continue
+
+		if s[0:2] == "A:":
+			pw = s[2:]
+
+		if s[0:2] == "B:":
+			pb = s[2:]
+
+		if s[0] == "C":
+			dt = s[1:]
+			if len(dt) > 10:
+				dt = dt[0:10]
+			dt = dt.replace(":", "-")
+
+		if s[0] == "W":
+			try:
+				grlt = int(s[1:])
+				if grlt == 0:
+					re = "B+"
+				elif grlt == 1:
+					re = "W+"
+				elif grlt == 3:
+					re = "B+R"
+				elif grlt == 4:
+					re = "W+R"
+				elif grlt == 7:
+					re = "B+T"
+				elif grlt == 8:
+					re = "W+T"
+			except:
+				pass
+
+		if s[0] == "G":
+			try:
+				gongje = int(s[1:])
+				km = str(gongje / 10)
+				if km.endswith(".0"):
+					km = km[:-2]
+			except:
+				pass
+
+		if s[0] == "Z":
+			try:
+				zipsu = int(s[1:])
+			except:
+				pass
+
+	if re == "B+" or re == "W+":
+		if zipsu > 0:
+			re += str(zipsu / 10)
+
+	return [dt, re, km, pb, pw]
