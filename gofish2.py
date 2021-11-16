@@ -34,13 +34,30 @@ class Board:
 					self.state[x].append("")
 
 
+	def __eq__(self, other):
+		if self.width != other.width or self.height != other.height:
+			return False
+		if self.ko != other.ko or self.active != other.active:
+			return False
+		if self.caps_by_b != other.caps_by_b or self.caps_by_w != other.caps_by_w:
+			return False
+		for x in range(self.width):
+			for y in range(self.height):
+				if self.state[x][y] != other.state[x][y]:
+					return False
+		return True
+
+
 	def copy(self):
 		return Board(self.width, self.height, self.state, self.ko, self.active, self.caps_by_b, self.caps_by_w)
 
 
 	def dump(self):
 
-		ko_x, ko_y = s_to_xy(self.ko)
+		if self.ko:
+			ko_x, ko_y = s_to_xy(self.ko)
+		else:
+			ko_x, ko_y = None, None
 
 		for y in range(0, self.height):
 			for x in range(0, self.width):
@@ -53,24 +70,35 @@ class Board:
 
 
 	def state_at(self, s):
+
 		x, y = s_to_xy(s)
-		if x >= 0 and x < self.width and y >= 0 and y < self.height:
-			return self.state[x][y]
-		else:
-			return ""
+
+		if x < 0 or x >= self.width or y < 0 or y >= self.height:
+			raise ValueError		# s was out of bounds
+
+		return self.state[x][y]
 
 
 	def set_at(self, s, colour):
-		assert(colour == "b" or colour == "w" or colour == "")
+
+		if colour not in ["", "b", "w"]:
+			raise ValueError
+
 		x, y = s_to_xy(s)
-		if x >= 0 and x < self.width and y >= 0 and y < self.height:
-			self.state[x][y] = colour
+
+		if x < 0 or x >= self.width or y < 0 or y >= self.height:
+			raise ValueError		# s was out of bounds
+
+		self.state[x][y] = colour
 
 
 	def neighbours(self, s):
+
 		x, y = s_to_xy(s)
+
 		if x < 0 or x >= self.width or y < 0 or y >= self.height:
-			return []
+			raise ValueError		# s was out of bounds
+
 		ret = []
 		if x < self.width - 1:
 			ret.append(xy_to_s(x + 1, y))
@@ -146,7 +174,10 @@ class Board:
 
 		assert(colour == "b" or colour == "w")
 
-		x, y = s_to_xy(s)
+		try:
+			x, y = s_to_xy(s)
+		except:
+			return False						# s_to_xy() can throw for many reasons, but this function has to be more tolerant.
 
 		if x < 0 or x >= self.width or y < 0 or y >= self.height:
 			return False
@@ -169,12 +200,12 @@ class Board:
 			if self.state_at(neighbour) == colour:
 				touched = dict()
 				touched[s] = True
-				if self.has_liberties_recurse(neighbour, touched):
+				if self._has_liberties_recurse(neighbour, touched):
 					return True					# One of the groups we're joining has a liberty other than s.
 			elif self.state_at(neighbour) == opposite_colour:
 				touched = dict()
 				touched[s] = True
-				if not self.has_liberties_recurse(neighbour, touched):
+				if not self._has_liberties_recurse(neighbour, touched):
 					return True					# One of the enemy groups has no liberties other than s.
 
 		return False
@@ -187,7 +218,10 @@ class Board:
 		self.ko = None
 		self.active = "b" if colour == "w" else "w"
 
-		x, y = s_to_xy(s)
+		try:
+			x, y = s_to_xy(s)
+		except:
+			return					# s was invalid in some way; treat as a pass.
 
 		if x < 0 or x >= self.width or y < 0 or y >= self.height:
 			return					# Treat as a pass.
@@ -327,33 +361,31 @@ class Node:
 
 	def _cache_board(self):
 
-		# As it stands, this only causes the board to exist in this node, and has no
-		# other side effects (i.e. boards in ancestor nodes are not caused to exist).
+		# Also caches the entire history (not doing so is silly, I guess).
 
 		if self._board:
 			return
 
 		node = self
 		history = []
+		work_board = None
 
 		while node:
-			history.append(node)
 			if node._board:
+				work_board = node._board.copy()
 				break
-			node = node.parent
+			else:
+				history.append(node)
+				node = node.parent
 
 		history.reverse()
 
-		if history[0]._board:
-			board = history[0]._board.copy()
-		else:
-			board = Board(history[0].width, history[0].height)		# In this case history[0] is the root.
-			history[0].apply(board)
+		if not work_board:
+			work_board = Board(self.width, self.height)
 
-		for node in history[1:]:
-			node.apply(board)
-
-		self._board = board
+		for node in history:
+			node.apply(work_board)
+			node._board = work_board.copy()
 
 
 	def make_board(self):
@@ -569,7 +601,7 @@ class Node:
 		return node
 
 
-	def _mutor_check(self, key):	# If we had board caches, these properties would require a recursive cache clear
+	def _mutor_check(self, key):	# With board caches, these properties require a recursive cache clear
 
 		if key in ["B", "W", "AB", "AW", "AE", "PL", "SZ"]:
 			self._clear_board_recursive()
@@ -594,13 +626,13 @@ class Node:
 
 # -------------------------------------------------------------------------------------------------
 
-def s_to_xy(s):
+def s_to_xy(s):						# "cc" --> 2,2
 
 	if not isinstance(s, str):
-		return (-1, -1)
+		raise TypeError
 
 	if len(s) != 2:
-		return (-1, -1)
+		raise ValueError
 
 	x_ascii = ord(s[0])
 	y_ascii = ord(s[1])
@@ -610,22 +642,22 @@ def s_to_xy(s):
 	elif x_ascii >= 65 and x_ascii <= 90:
 		x = x_ascii - 65 + 26
 	else:
-		return (-1, -1)
+		raise ValueError
 
 	if y_ascii >= 97 and y_ascii <= 122:
 		y = y_ascii - 97
 	elif y_ascii >= 65 and y_ascii <= 90:
 		y = y_ascii - 65 + 26
 	else:
-		return (-1, -1)
+		raise ValueError
 
 	return (x, y)
 
 
-def xy_to_s(x, y):
+def xy_to_s(x, y):					# 2,2 --> "cc"
 
 	if x < 0 or x >= 52 or y < 0 or y >= 52:
-		return ""
+		raise ValueError
 
 	s = ""
 
@@ -642,7 +674,39 @@ def xy_to_s(x, y):
 	return s
 
 
-def safe_string(s):     				# "safe" meaning safely escaped \ and ] characters
+def english_to_xy(e, height = 19, i_adjust = True):		# "Q16"     --->    15,3
+
+	if not isinstance(e, str):
+		raise TypeError
+
+	if len(e) != 2 and len(e) != 3:
+		raise ValueError
+
+	e = e.upper()
+
+	if e[0] not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+		raise ValueError
+
+	x = ord(e[0]) - 65
+
+	if i_adjust:
+		if e[0] == "I":
+			raise ValueError
+		if x > 7:
+			x -= 1
+
+	try:
+		y = height - int(e[1:])
+	except:
+		raise ValueError
+
+	if y < 0 or y >= height:
+		raise ValueError
+
+	return (x, y)
+
+
+def safe_string(s):     			# "safe" meaning safely escaped \ and ] characters
 	s = s.replace("\\", "\\\\")
 	s = s.replace("]", "\\]")
 	return s
