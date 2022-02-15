@@ -4,3 +4,4 @@ files/
 misc/
 *.db
 go.db-journal
+non-archive/
