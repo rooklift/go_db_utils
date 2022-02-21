@@ -7,10 +7,6 @@ import gofish2, go_db
 with open("gogod_name_fixes.json") as infile:
 	gogod_name_fixes = json.loads(infile.read())
 
-with open("gogod_name_fixes_extra.json") as infile:
-	extra = json.loads(infile.read())
-	for key in extra:
-		gogod_name_fixes[key] = extra[key]
 
 def fix_root(root):
 
@@ -85,10 +81,9 @@ def main():
     dir_known_files = set()
 
     for rootdir in rootdirs:
-        for root, dirs, files in os.walk(rootdir):
-            for f in files:
-
-                full_path = os.path.abspath(os.path.join(root, f)).replace("\\", "/")
+        for dirpath, dirnames, filenames in os.walk(rootdir):
+            for f in filenames:
+                full_path = os.path.abspath(os.path.join(dirpath, f)).replace("\\", "/")
                 dir_known_files.add(full_path)
                 count += 1
                 if count % 10000 == 0:
