@@ -1,7 +1,28 @@
 #!/usr/bin/env python3
 
-import os, sqlite3, sys
+import json, os, sqlite3, sys
 import gofish2, go_db
+
+
+with open("gogod_name_fixes.json") as infile:
+	gogod_name_fixes = json.loads(infile.read())
+
+with open("gogod_name_fixes_extra.json") as infile:
+	extra = json.loads(infile.read())
+	for key in extra:
+		gogod_name_fixes[key] = extra[key]
+
+def fix_root(root):
+
+	PB = root.get("PB")
+	if PB and PB in gogod_name_fixes:
+		root.set("PB", gogod_name_fixes[PB])
+		print("    ", PB, "-->", gogod_name_fixes[PB])
+
+	PW = root.get("PW")
+	if PW and PW in gogod_name_fixes:
+		root.set("PW", gogod_name_fixes[PW])
+		print("    ", PW, "-->", gogod_name_fixes[PW])
 
 
 def main():
@@ -93,6 +114,9 @@ def main():
     for full_path in files_to_add_list:
         try:
             sgfroot = gofish2.load(full_path)[0]
+            if "gogod" in full_path.lower():
+            	fix_root(sgfroot)
+
         except:
             fail_list.append(full_path)
             continue
@@ -154,3 +178,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
