@@ -1,7 +1,6 @@
 __pycache__/
 archive/
-files/
-misc/
+zips/
+non-archive/
 *.db
 go.db-journal
-non-archive/
